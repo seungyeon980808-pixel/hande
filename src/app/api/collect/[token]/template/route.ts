@@ -1,0 +1,7 @@
+import path from "node:path";
+import { collectionType } from "@/lib/domain";
+import { findByShareHash } from "@/lib/repository";
+import { readStored } from "@/lib/files";
+import { tokenHash } from "@/lib/security";
+import { personalizeHwpx } from "@/lib/hwpx";
+export async function GET(request:Request,{params}:{params:Promise<{token:string}>}){try{const {token}=await params,item=await findByShareHash(tokenHash(token));if(!item)return Response.json({error:"유효하지 않은 제출 링크입니다."},{status:404});const type=collectionType(item);if(type==="table")return Response.json({error:"웹 표 취합에는 내려받을 양식 파일이 없습니다."},{status:400});const teacherId=new URL(request.url).searchParams.get("teacherId"),person=item.recipients.find(r=>r.id===teacherId);if(!person)return Response.json({error:"제출 대상자를 확인할 수 없습니다."},{status:403});let bytes=new Uint8Array(await readStored(item.templateStorageKey));if(type==="document"&&path.extname(item.templateName).toLowerCase()===".hwpx")bytes=personalizeHwpx(bytes,person.name,person.department);return new Response(bytes,{headers:{"Content-Type":type==="xlsx"?"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":"application/octet-stream","Content-Disposition":`${type==="xlsx"?"attachment":"inline"}; filename*=UTF-8''${encodeURIComponent(item.templateName)}`,"X-Document-Name":encodeURIComponent(item.templateName),"Cache-Control":"no-store"}})}catch(error){console.error(error);return Response.json({error:"양식을 여는 중 오류가 발생했습니다."},{status:500})}}

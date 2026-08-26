@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 학교업무 한곳 — 업무 취합 프로토타입
 
-## Getting Started
+교사가 파일을 내려받고, 이름을 바꾸고, 메신저에 다시 첨부하는 흐름과 여러 스프레드시트를 수작업으로 합치는 흐름을 하나의 링크로 줄이는 시연용 웹앱입니다.
 
-First, run the development server:
+## 현재 구현된 흐름
+
+1. 담당자가 제목, 마감, 대상 교사와 취합 유형을 지정합니다.
+   - **한글 문서 취합:** HWP/HWPX 양식을 rHWP에서 작성합니다.
+   - **웹 표 취합:** 담당자가 열과 기본 행을 만들고 교사는 브라우저에서 여러 행을 입력합니다.
+   - **엑셀 파일 취합:** XLSX 양식을 내려받아 Excel에서 작성한 파일을 다시 제출합니다.
+2. 모든 교사에게 보낼 공통 제출 링크와 담당자 전용 관리 링크가 생성됩니다.
+3. 교사는 로그인 없이 이름과 부서를 검색·선택합니다.
+4. 한글 양식은 rHWP 편집기에 열리고 HWPX의 `{{교사명}}`, `{{부서명}}`을 자동 치환합니다.
+5. 웹 표는 글자·숫자·날짜·단일 선택 열, 필수값과 선택지를 지원하며 교사가 행을 추가·삭제할 수 있습니다.
+6. 웹 표와 한글 문서는 1분마다 서버에 자동 임시저장됩니다. XLSX는 작성 중 파일을 `임시 업로드`할 수 있습니다.
+7. 최종 제출하면 기존 제출을 덮어쓰지 않고 새 버전으로 저장합니다.
+8. 웹 표 담당자는 최신 제출을 `전체 취합 결과`와 `제출 현황` 시트가 든 XLSX로 내려받습니다.
+9. 엑셀 파일 담당자는 교사별 모든 버전을 내려받거나 최신 제출을 ZIP으로 한 번에 받습니다.
+10. 담당자는 미작성·작성 중·제출·재제출 현황과 모든 제출 버전을 확인할 수 있습니다.
+11. 업무 매뉴얼 화면에서 제목·본문·태그를 한 번에 검색하고 상세 절차를 펼쳐볼 수 있습니다.
+12. 나의 툴박스에서 자주 사용하는 수업·업무 사이트를 검색하고 직접 추가·수정·삭제할 수 있습니다. 툴박스 설정은 사용하는 브라우저에 자동 저장됩니다.
+13. 시간표 화면에서 설정한 학교의 날짜·학년·반별 최신 시간표를 나이스 교육정보 개방 API로 확인합니다.
+
+## 바로 실행
+
+macOS에서는 프로젝트 폴더의 **`실행하기.command`** 파일을 더블클릭하면 됩니다. 처음 실행할 때는 패키지 설치로 잠시 시간이 걸릴 수 있습니다. 터미널 창을 닫으면 서버도 종료됩니다.
+
+> macOS가 처음 실행을 차단하면 파일을 Control-클릭한 뒤 **열기**를 선택하세요.
+
+Node.js 22 이상에서:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+브라우저에서 `http://localhost:3000`을 엽니다. 같은 학교망의 다른 기기는 실행 화면에 표시되는 `Network` 주소(예: `http://192.168.x.x:3000`)로 접속할 수 있습니다. macOS 방화벽에서 Node의 수신 연결을 허용해야 할 수 있습니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+나이스 시간표 연동은 `.env.example`을 복사해 `.env.local`을 만들고 `NEIS_API_KEY`, `NEIS_ATPT_OFCDC_SC_CODE`, `NEIS_SD_SCHUL_CODE`를 설정합니다. API 키에는 `NEXT_PUBLIC_` 접두사를 붙이지 말고 Git에 커밋하지 마세요. 시간표는 5분마다 다시 조회하지만 나이스 개방 데이터의 실제 반영 시점에 따라 변경 사항이 늦게 표시될 수 있습니다.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+검증 명령:
 
-## Learn More
+```bash
+npm test
+npm run lint
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 저장 구조와 보안 경계
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- 개발 시 메타데이터와 웹 표의 행 데이터는 `.data/state.json`, HWP/HWPX/XLSX 파일은 `storage/private`에 저장됩니다. 둘 다 Git에서 제외되며 웹의 `public` 폴더 밖에 있습니다.
+- 저장 파일명은 UUID이고, 내려받을 때만 사람이 읽을 수 있는 이름을 사용합니다.
+- 제출·관리 주소는 256비트 난수 토큰이며 서버에는 SHA-256 해시만 저장합니다.
+- HWP/HWPX/XLSX 확장자와 20MB 크기 제한, 입력값 검증, 경로 검사, 버전 불변 보관을 적용했습니다. XLSX는 허용 MIME과 ZIP 시그니처도 검사합니다.
+- 이름 선택 방식은 사용성을 위한 **신뢰 기반 식별**이지 강한 본인 인증이 아닙니다. 실제 민감정보 취급 전 학교 계정 SSO 또는 내부 인증을 추가해야 합니다.
+- 임시저장본은 브라우저에 생성되는 무작위 복구 키와 서버의 해시가 일치할 때만 열립니다. 다른 기기에서의 자동 복구는 현재 지원하지 않습니다. XLSX 임시본도 저장한 브라우저에서만 내려받을 수 있습니다.
+- 담당자 관리 화면에는 작성 중 상태만 표시하며 임시저장 문서 내용이나 다운로드 주소는 노출하지 않습니다.
+- 현재 앱 자체에 학교 내부망 IP 차단 기능을 넣지 않았습니다. 운영 시 공유기/방화벽에서 서버 3000번 포트를 교내 대역에만 허용해야 합니다.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## rHWP와 폐쇄망 주의사항
 
-## Deploy on Vercel
+`@rhwp/editor`의 기본 Studio는 외부 주소 `https://edwardkim.github.io/rhwp/`입니다. 따라서 현재 설정은 인터넷이 되는 시연 환경용입니다. 완전한 폐쇄망에서는 rHWP Studio 정적 파일을 내부 서버에 자체 호스팅하고 `NEXT_PUBLIC_RHWP_STUDIO_URL`을 그 내부 주소로 바꿔야 합니다. 자체 호스팅 전에는 “문서가 외부로 절대 나가지 않는다”고 판단하면 안 됩니다.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+HWPX 자동 치환은 XML 안에 플레이스홀더 문자열이 연속해서 들어 있는 단순 양식을 대상으로 합니다. 한글 프로그램이 글자를 여러 XML 노드로 나눈 복잡한 문서와 임의 HWP 파일의 자동 치환은 별도 호환성 검증이 필요합니다.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 엑셀 취합의 범위와 제약
+
+- 웹 표에서는 담당자만 열 구조를 바꿀 수 있고, 교사는 같은 열 구조에서 행만 추가·삭제합니다. 그래야 여러 사람의 제출을 안전하게 한 표로 합칠 수 있습니다.
+- 통합 XLSX에는 각 교사의 **최신 최종 제출**만 들어가며, 여러 행을 제출하면 모든 행이 포함됩니다. 이전 버전은 관리 화면의 이력에 그대로 남습니다.
+- 임의 형식의 XLSX 파일은 셀 위치와 시트 구조가 서로 다를 수 있으므로 자동 병합하지 않습니다. 대신 원본 버전을 보존하고 최신 파일을 ZIP으로 제공합니다.
+- 매크로가 포함된 XLSM, 구형 XLS, 암호화된 XLSX는 현재 지원하지 않습니다.
+- XLSX 생성에는 MIT 라이선스의 ExcelJS를 사용합니다.
+
+## 직접 검증 절차
+
+### 웹 표 취합
+
+1. `새 취합 요청`에서 `엑셀 취합 → 웹 표로 입력`을 선택합니다.
+2. 열을 추가·삭제·이동하고 글자/숫자/날짜/단일 선택, 필수 여부와 선택지를 설정합니다.
+3. 기본 행과 대상 교사를 정한 뒤 요청을 만들고 교사용 링크를 엽니다.
+4. 본인을 선택하고 여러 행을 작성한 뒤 임시저장, 새로고침 복구, 최종 제출과 재제출을 차례로 확인합니다.
+5. 관리 링크에서 상태와 버전을 확인하고 `통합 XLSX 다운로드`를 누릅니다.
+6. 내려받은 파일에 `전체 취합 결과`, `제출 현황` 시트가 있는지 확인합니다.
+
+### 엑셀 파일 취합
+
+1. `새 취합 요청`에서 `엑셀 취합 → 엑셀 파일로 제출`을 선택하고 XLSX 양식을 올립니다.
+2. 교사용 링크에서 양식을 내려받고 Excel로 작성한 뒤 `임시 업로드`합니다.
+3. 같은 브라우저에서 임시 파일 다운로드가 보이는지 확인한 뒤 `최종 제출`과 재제출을 진행합니다.
+4. 관리 링크에서 각 버전을 내려받고 `최신 제출 ZIP`을 확인합니다.
+
+기존 `type` 필드가 없는 `.data/state.json` 요청은 자동으로 한글 문서 취합으로 읽습니다. 읽는 과정에서 기존 시험 데이터를 초기화하거나 파일을 이동하지 않습니다.
+
+## PostgreSQL과 Docker
+
+`src/db/schema.ts`, `drizzle.config.ts`, `compose.yaml`에 PostgreSQL 배포 뼈대를 포함했습니다. 현재 하루 시연본의 실행 저장소는 로컬 파일 방식이며 PostgreSQL 저장소 어댑터는 다음 단계입니다. 즉, Compose의 DB 컨테이너는 준비됐지만 앱 데이터가 아직 DB에 기록되지는 않습니다.
+
+학교 운영 전 필수 후속 작업:
+
+1. 로컬 파일 저장소를 PostgreSQL 어댑터로 교체하고 트랜잭션·동시 제출을 부하 테스트합니다.
+2. rHWP Studio를 내부 서버에 자체 호스팅합니다.
+3. HTTPS, 방화벽 허용 대역, 백업·복구, 로그 보존 정책을 설정합니다.
+4. 실제 개인정보 없이 보안 점검을 거친 후 단계적으로 적용합니다.
+
+## 라이선스
+
+이 프로젝트의 소스 코드는 [MIT License](./LICENSE)로 공개됩니다. 실제 학교 업무에 적용할 때에는 소속 기관의 개인정보·보안 정책을 별도로 확인하고, 저장소에 실제 학생·교직원 정보나 제출 문서를 커밋하지 마세요.
+
+## OMO 하네스
+
+기획 검토와 출시 전 진단에는 OMO 하네스를 사용했습니다. 최근 진단은 OMO `5.0.0-0.beta.18`(Senpi `2026.8.23`)의 `openai-codex/gpt-5.6-terra` 모델로 수행했으며, rHWP 연동 격리, 불변 제출 버전, 관리 토큰 분리, 저장 실패 후 큐 복구와 마감 시각 강제를 확인했습니다.

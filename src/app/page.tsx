@@ -1,69 +1,7 @@
-import Image from "next/image";
-
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
-}
+import Link from "next/link";
+import { listCollections } from "@/lib/repository";
+import { AppFrame } from "@/components/app-frame";
+import { collectionType,collectionTypeLabel } from "@/lib/domain";
+export const dynamic="force-dynamic";
+export default async function Home(){const items=await listCollections();const total=items.reduce((sum,item)=>sum+item.recipients.length,0),submitted=items.reduce((sum,item)=>sum+item.recipients.filter(recipient=>recipient.versions.length).length,0);return <AppFrame><div className="page-head"><div><h1>업무 취합</h1><p className="subtle">한글 문서와 엑셀 데이터를 하나의 링크에서 받고 진행 상황까지 확인합니다.</p></div><Link className="btn btn-primary" href="/requests/new">+ 새 취합 요청</Link></div><div className="stats"><Stat label="진행 중 요청" value={items.length}/><Stat label="전체 대상" value={total}/><Stat label="제출 완료" value={submitted}/><Stat label="미제출" value={total-submitted}/></div><section className="card"><div className="toolbar"><strong>최근 취합 요청</strong><span className="subtle">총 {items.length}건</span></div><div className="table-wrap"><table><thead><tr><th>요청명</th><th>유형</th><th>마감일</th><th>대상</th><th>제출</th><th>상태</th></tr></thead><tbody>{items.length?items.map(item=>{const count=item.recipients.filter(recipient=>recipient.versions.length).length,type=collectionType(item);return <tr key={item.id}><td><strong>{item.title}</strong></td><td><span className="badge badge-type">{collectionTypeLabel(type)}</span></td><td>{new Date(item.deadline).toLocaleString("ko-KR")}</td><td>{item.recipients.length}명</td><td>{count}/{item.recipients.length}</td><td><span className="badge badge-open">진행 중</span></td></tr>}):<tr><td colSpan={6} style={{textAlign:"center",padding:42,color:"#607080"}}>아직 요청이 없습니다. 첫 취합 요청을 만들어 보세요.</td></tr>}</tbody></table></div></section></AppFrame>}
+function Stat({label,value}:{label:string;value:number}){return <div className="card stat"><span>{label}</span><b>{value}</b></div>}

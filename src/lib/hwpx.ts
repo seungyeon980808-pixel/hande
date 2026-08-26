@@ -1,0 +1,3 @@
+import { strFromU8,strToU8,unzipSync,zipSync } from "fflate";
+export function personalizeHwpx(source:Uint8Array,name:string,department:string){const files=unzipSync(source);for(const [key,value] of Object.entries(files)){if(!key.endsWith(".xml"))continue;const xml=strFromU8(value);if(xml.includes("{{교사명}}")||xml.includes("{{부서명}}"))files[key]=strToU8(xml.replaceAll("{{교사명}}",escapeXml(name)).replaceAll("{{부서명}}",escapeXml(department)))}return zipSync(files,{level:6})}
+function escapeXml(value:string){return value.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&apos;")}

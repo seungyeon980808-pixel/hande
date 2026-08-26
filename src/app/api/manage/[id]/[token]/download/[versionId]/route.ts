@@ -1,0 +1,4 @@
+import { findManaged } from "@/lib/repository";
+import { readStored } from "@/lib/files";
+import { tokenHash } from "@/lib/security";
+export async function GET(_request:Request,{params}:{params:Promise<{id:string;token:string;versionId:string}>}){const {id,token,versionId}=await params,item=await findManaged(id,tokenHash(token));if(!item)return Response.json({error:"권한이 없거나 요청을 찾을 수 없습니다."},{status:404});const version=item.recipients.flatMap(r=>r.versions).find(v=>v.id===versionId);if(!version||version.kind==="table"||!version.storageKey)return Response.json({error:"파일을 찾을 수 없습니다."},{status:404});const bytes=await readStored(version.storageKey);return new Response(bytes,{headers:{"Content-Type":"application/octet-stream","Content-Disposition":`attachment; filename*=UTF-8''${encodeURIComponent(version.displayName)}`,"Cache-Control":"private, no-store"}})}

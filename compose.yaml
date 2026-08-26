@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports: ["3000:3000"]
+    environment:
+      DATABASE_URL: postgresql://school:${DB_PASSWORD:-change-me}@db:5432/school_work
+      NEXT_PUBLIC_RHWP_STUDIO_URL: ${RHWP_STUDIO_URL:-https://edwardkim.github.io/rhwp/}
+      NEIS_API_KEY: ${NEIS_API_KEY:-}
+      NEIS_ATPT_OFCDC_SC_CODE: ${NEIS_ATPT_OFCDC_SC_CODE:-}
+      NEIS_SD_SCHUL_CODE: ${NEIS_SD_SCHUL_CODE:-}
+    volumes: ["private_files:/app/storage/private", "prototype_data:/app/.data"]
+    depends_on: [db]
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: school_work
+      POSTGRES_USER: school
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+volumes:
+  private_files:
+  prototype_data:
+  postgres_data:

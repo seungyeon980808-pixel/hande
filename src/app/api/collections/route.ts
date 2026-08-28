@@ -5,6 +5,7 @@ import { deleteStored,storeFile,storeSpreadsheet } from "@/lib/files";
 import { saveCollection } from "@/lib/repository";
 import { newToken,tokenHash,safeFileName } from "@/lib/security";
 import { parseTableDefinition } from "@/lib/table";
+import { DEFAULT_TARGET_YEAR } from "@/lib/school-year";
 
 const schema=z.object({
   type:z.enum(["document","table","xlsx"]),
@@ -21,7 +22,7 @@ export async function POST(request:Request){
   let pendingReferenceKey="";
   try{
     const form=await request.formData();
-    const parsed=schema.safeParse({type:form.get("type"),title:form.get("title"),description:form.get("description")??"",deadline:form.get("deadline"),recipientIds:form.getAll("recipientIds"),targetYear:form.get("targetYear")||new Date().getFullYear()+1});
+    const parsed=schema.safeParse({type:form.get("type"),title:form.get("title"),description:form.get("description")??"",deadline:form.get("deadline"),recipientIds:form.getAll("recipientIds"),targetYear:form.get("targetYear")||DEFAULT_TARGET_YEAR});
     if(!parsed.success)return Response.json({error:parsed.error.issues[0]?.message},{status:400});
     const chosen=teachers.filter(teacher=>parsed.data.recipientIds.includes(teacher.id));
     if(chosen.length!==new Set(parsed.data.recipientIds).size)return Response.json({error:"제출 대상 정보가 올바르지 않습니다."},{status:400});

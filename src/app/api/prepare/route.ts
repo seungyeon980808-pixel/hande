@@ -3,6 +3,7 @@ import { z } from "zod";
 import { MAX_FILE_BYTES } from "@/lib/files";
 import { applySuggestions,detectPrepItems,extractText,renameBySuggestions } from "@/lib/refresh";
 import { safeFileName } from "@/lib/security";
+import { resolveTargetYear } from "@/lib/school-year";
 
 export const dynamic="force-dynamic";
 
@@ -22,8 +23,7 @@ export async function POST(request:Request){
     if(file.size<=0||file.size>MAX_FILE_BYTES)return Response.json({error:"파일 크기는 20MB 이하여야 합니다."},{status:400});
     const bytes=new Uint8Array(await file.arrayBuffer());
 
-    const parsedYear=Number(form.get("targetYear"));
-    const targetYear=Number.isInteger(parsedYear)&&parsedYear>2000&&parsedYear<2100?parsedYear:new Date().getFullYear()+1;
+    const targetYear=resolveTargetYear(form.get("targetYear"));
 
     const raw=form.get("accepted");
     if(raw===null){

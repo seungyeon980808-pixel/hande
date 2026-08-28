@@ -2,6 +2,7 @@ import path from "node:path";
 import { MAX_FILE_BYTES } from "@/lib/files";
 import { detectByRules,detectWarnings,extractText,type Suggestion } from "@/lib/refresh";
 import { geminiEnabled,suggestByAi } from "@/lib/gemini";
+import { resolveTargetYear } from "@/lib/school-year";
 
 export const dynamic="force-dynamic";
 
@@ -14,8 +15,7 @@ export async function POST(request:Request){
     if(path.extname(file.name).toLowerCase()!==".hwpx")return Response.json({error:"HWPX 파일만 분석할 수 있습니다. 한글에서 hwpx로 저장해 주세요."},{status:400});
     if(file.size<=0||file.size>MAX_FILE_BYTES)return Response.json({error:"파일 크기는 20MB 이하여야 합니다."},{status:400});
 
-    const parsedYear=Number(form.get("targetYear"));
-    const targetYear=Number.isInteger(parsedYear)&&parsedYear>2000&&parsedYear<2100?parsedYear:new Date().getFullYear()+1;
+    const targetYear=resolveTargetYear(form.get("targetYear"));
 
     let text:string;
     try{text=extractText(new Uint8Array(await file.arrayBuffer()))}

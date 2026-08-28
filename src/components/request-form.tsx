@@ -34,4 +34,32 @@ export function RequestForm({teachers}:{teachers:Teacher[]}){
 }
 
 function TypeButton({active,onClick,title,detail}:{active:boolean;onClick:()=>void;title:string;detail:string}){return <button type="button" className={`type-card ${active?"active":""}`} onClick={onClick}><strong>{title}</strong><span>{detail}</span></button>}
-function CopyField({label,value}:{label:string;value:string}){const [done,setDone]=useState(false);return <div className="field"><label>{label}</label><div style={{display:"flex",gap:8}}><input readOnly value={value}/><button type="button" className="btn btn-secondary" onClick={async()=>{await navigator.clipboard.writeText(value);setDone(true)}}>{done?"복사됨":"복사"}</button></div></div>}
+/**
+ * 링크를 복사하고, 복사한 뒤에는 바로 새 탭에서 열 수 있게 한다.
+ * 복사 다음에 하는 일이 대개 "열어서 확인" 이기 때문이다.
+ */
+function CopyField({label,value}:{label:string;value:string}){
+  const [copied,setCopied]=useState(false);
+  const [failed,setFailed]=useState(false);
+  async function copy(){
+    try{
+      await navigator.clipboard.writeText(value);
+      setCopied(true);setFailed(false);
+    }catch{
+      // 보안 설정에 따라 복사가 막힐 수 있다. 그때는 직접 고르도록 알린다.
+      setFailed(true);
+    }
+  }
+  return <div className="field">
+    <label>{label}</label>
+    <div style={{display:"flex",gap:8}}>
+      <input readOnly value={value} onFocus={event=>event.currentTarget.select()}/>
+      {copied
+        ?<a className="btn btn-primary" href={value} target="_blank" rel="noreferrer"
+           style={{whiteSpace:"nowrap"}}>새 탭에서 열기</a>
+        :<button type="button" className="btn btn-secondary" onClick={()=>void copy()} style={{whiteSpace:"nowrap"}}>복사</button>}
+    </div>
+    {copied&&<span className="help">링크를 복사했습니다. 눌러서 바로 열어 볼 수 있습니다.</span>}
+    {failed&&<span className="help">복사하지 못했습니다. 주소를 직접 선택해 복사해 주세요.</span>}
+  </div>;
+}

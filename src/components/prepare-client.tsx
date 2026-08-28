@@ -29,8 +29,9 @@ export function PrepareClient({defaultYear}:{defaultYear:number}){
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   const [status,setStatus]=useState("");
+  const [detail,setDetail]=useState(false);
 
-  function reset(){setAnalysis(null);setPicked(new Set());setValues({});setMade(null);setError("");setStatus("")}
+  function reset(){setAnalysis(null);setPicked(new Set());setValues({});setMade(null);setError("");setStatus("");setDetail(false)}
 
   async function scan(){
     if(!file){setError("작년 완성본(HWPX)을 선택하세요.");return}
@@ -108,43 +109,72 @@ export function PrepareClient({defaultYear}:{defaultYear:number}){
     </div>
 
     {analysis&&analysis.items.length>0&&<div className="card card-pad">
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-        <div><strong style={{fontSize:16}}>{year}학년도 양식으로 만들기</strong>
-          <p className="help" style={{margin:"4px 0 0"}}>체크한 항목만 적용됩니다. 표와 항목 이름은 그대로 남습니다.</p></div>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <span className="badge badge-open">{picked.size} / {analysis.items.length} 선택</span>
-          <SchedulePopover year={Number(year)}/>
-        </div>
+      <strong style={{fontSize:16}}>{year}학년도 양식으로 만듭니다</strong>
+      <p className="help" style={{margin:"4px 0 14px"}}>표와 항목 이름은 그대로 두고 아래만 손봅니다.</p>
+
+      <div className="prep-summary">
+        {itemsOf("연도").length>0&&<div className="prep-line">
+          <span className="prep-tag is-change">바꿈</span>
+          <span>연도 · 학년도</span>
+          <span className="prep-detail">
+            {itemsOf("연도").map(item=><span key={item.id} className="prep-pair">
+              <code>{item.text}</code> →
+              <select value={values[item.id]??item.suggested}
+                onChange={event=>setValues(prev=>({...prev,[item.id]:event.target.value}))}>
+                {item.options?.map(option=><option key={option} value={option}>{option}</option>)}
+              </select>
+            </span>)}
+          </span>
+        </div>}
+
+        {itemsOf("회차").length>0&&<div className="prep-line">
+          <span className="prep-tag is-change">바꿈</span>
+          <span>회차 · 기수</span>
+          <span className="prep-detail">
+            {itemsOf("회차").map(item=><span key={item.id} className="prep-pair">
+              <code>{item.text}</code> →
+              <select value={values[item.id]??item.suggested}
+                onChange={event=>setValues(prev=>({...prev,[item.id]:event.target.value}))}>
+                {item.options?.map(option=><option key={option} value={option}>{option}</option>)}
+              </select>
+            </span>)}
+          </span>
+        </div>}
+
+        {itemsOf("날짜").length>0&&<div className="prep-line">
+          <span className="prep-tag is-clear">비움</span>
+          <span>날짜 {itemsOf("날짜").length}곳</span>
+          <span className="prep-detail help">해가 바뀌면 요일이 달라집니다. 비워 두면 작성하는 선생님이 학사일정을 보며 채웁니다.</span>
+        </div>}
+
+        {itemsOf("이름").length>0&&<div className="prep-line">
+          <span className="prep-tag is-clear">비움</span>
+          <span>담당자 이름 {itemsOf("이름").length}명</span>
+          <span className="prep-detail help">{itemsOf("이름").map(item=>item.text).join(" · ")}</span>
+        </div>}
       </div>
 
-      {GROUPS.map(group=>{
-        const items=itemsOf(group.kind);
-        if(!items.length)return null;
-        // 날짜와 이름은 모두 비우므로 줄마다 늘어놓지 않고 알약처럼 촘촘히 보여 준다.
-        const compact=group.kind==="날짜"||group.kind==="이름";
-        const chosen=items.filter(item=>picked.has(item.id)).length;
-        return <section key={group.kind} style={{marginTop:16}}>
-          <div style={{display:"flex",alignItems:"baseline",gap:8,flexWrap:"wrap"}}>
-            <strong style={{fontSize:14}}>{group.title} ({items.length})</strong>
-            {compact&&<>
-              <span className="help">{chosen}개 바꿈 · 적지 않으면 비웁니다</span>
-              <button type="button" className="link-button" onClick={()=>setPicked(prev=>{
-                const next=new Set(prev);
-                const all=items.every(item=>next.has(item.id));
-                for(const item of items){if(all)next.delete(item.id);else next.add(item.id)}
-                return next;
-              })}>{items.every(item=>picked.has(item.id))?"이 묶음 해제":"이 묶음 선택"}</button>
-            </>}
-          </div>
-          <p className="help" style={{margin:"2px 0 8px"}}>{group.hint}</p>
+      <div className="action-buttons" style={{marginTop:18}}>
+        <button className="btn btn-primary" disabled={busy} onClick={()=>void make()}>{busy?"처리 중...":`${year}학년도 양식 만들기`}</button>
+        <button type="button" className="link-button" onClick={()=>setDetail(value=>!value)}>{detail?"자세히 닫기":"자세히 보고 하나씩 정하기"}</button>
+      </div>
 
-          {compact
-            ?<div className="fill-list">
+      {detail&&<div style={{marginTop:16,borderTop:"1px solid #e5e9f0",paddingTop:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:10}}>
+          <span className="help">체크를 해제하면 그대로 둡니다. 날짜는 여기서 미리 정할 수도 있습니다.</span>
+          <SchedulePopover year={Number(year)}/>
+        </div>
+        {GROUPS.filter(group=>group.kind==="날짜"||group.kind==="이름").map(group=>{
+          const items=itemsOf(group.kind);
+          if(!items.length)return null;
+          return <section key={group.kind} style={{marginTop:12}}>
+            <strong style={{fontSize:14}}>{group.title} ({items.length})</strong>
+            <div className="fill-list" style={{marginTop:8}}>
               {items.map(item=>{
                 const on=picked.has(item.id);
                 const value=values[item.id]??"";
                 return <div key={item.id} className={`fill-row${on?" is-on":""}`}>
-                  <input type="checkbox" checked={on} onChange={()=>toggle(item.id)} aria-label={`${item.text} 바꾸기`}/>
+                  <input type="checkbox" checked={on} onChange={()=>toggle(item.id)} aria-label={`${item.text} 비우기`}/>
                   {group.kind==="날짜"
                     ?<SourceDate schoolYear={analysis.sourceYear} text={item.text}/>
                     :<code className="fill-from">{item.text}</code>}
@@ -152,37 +182,17 @@ export function PrepareClient({defaultYear}:{defaultYear:number}){
                   <span aria-hidden>→</span>
                   {group.kind==="날짜"
                     ?<DatePicker schoolYear={Number(year)} value={value} disabled={!on}
-                       placeholder="달력에서 고르기 (비우려면 그대로)"
+                       placeholder="비움 (정하려면 달력)"
                        onChange={next=>setValues(prev=>({...prev,[item.id]:next}))}/>
                     :<input className="fill-input" type="text" value={value} disabled={!on}
-                       placeholder="새 이름 (비우려면 그대로)"
+                       placeholder="비움 (적으면 그 값으로)"
                        onChange={event=>setValues(prev=>({...prev,[item.id]:event.target.value}))}/>}
                 </div>;
               })}
             </div>
-            :<div style={{display:"grid",gap:6}}>
-              {items.map(item=><label key={item.id} className="teacher-check" style={{cursor:"pointer",textAlign:"left",alignItems:"center"}}>
-                <input type="checkbox" checked={picked.has(item.id)} onChange={()=>toggle(item.id)}/>
-                <span style={{flex:1,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                  <code style={{background:"#fee",padding:"2px 6px",borderRadius:4}}>{item.text}</code>
-                  <span aria-hidden>→</span>
-                  <select value={values[item.id]??item.suggested} disabled={!picked.has(item.id)}
-                    onChange={event=>setValues(prev=>({...prev,[item.id]:event.target.value}))}
-                    onClick={event=>event.preventDefault()}>
-                    {item.options?.map(option=><option key={option} value={option}>{option}</option>)}
-                  </select>
-                  {item.count>1&&<span className="help">문서에 {item.count}곳</span>}
-                </span>
-              </label>)}
-            </div>}
-        </section>;
-      })}
-
-      <div className="action-buttons" style={{marginTop:18}}>
-        <button className="btn btn-secondary" disabled={busy} onClick={()=>setPicked(new Set(analysis.items.map(item=>item.id)))}>전체 선택</button>
-        <button className="btn btn-secondary" disabled={busy} onClick={()=>setPicked(new Set())}>전체 해제</button>
-        <button className="btn btn-primary" disabled={busy||!picked.size} onClick={()=>void make()}>{busy?"처리 중...":`${year}학년도 양식 만들어 내려받기`}</button>
-      </div>
+          </section>;
+        })}
+      </div>}
     </div>}
 
     {made&&<div className="card card-pad" style={{borderColor:"#2e7d32"}}>

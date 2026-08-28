@@ -194,7 +194,11 @@ export function detectPrepItems(text:string,targetYear:number){
     const dates=list.filter(item=>item.kind==="날짜").sort((a,b)=>b.text.length-a.text.length);
     const keep:PrepItem[]=[];
     for(const item of dates){
-      if(keep.some(kept=>kept.text.includes(item.text)))continue;
+      // 짧은 쪽이 긴 쪽 안에서만 나온다면 같은 자리이므로 버린다.
+      // 문서 다른 곳에 단독으로도 나온다면 남겨야 그 자리도 지워진다.
+      const covered=keep.some(kept=>
+        kept.text.includes(item.text)&&countOccurrences(text,item.text)<=countOccurrences(text,kept.text));
+      if(covered)continue;
       keep.push(item);
     }
     const keepSet=new Set(keep.map(item=>item.text));

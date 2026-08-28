@@ -114,4 +114,11 @@ describe("작년 양식 갱신",()=>{
     expect(detectPrepItems("2024학년도 계획",2026).sourceYear).toBe(2024);
     expect(detectPrepItems("연도가 없는 문서",2026).sourceYear).toBe(2025);
   });
+
+  it("같은 자리만 겹칠 때 짧은 쪽을 버리고, 단독으로도 나오면 남긴다",()=>{
+    const both=detectPrepItems("5월 3일(금)~8일(수) 그리고 5월 3일(금) 따로",2026).items;
+    expect(both.some(item=>item.text==="5월 3일(금)")).toBe(true);
+    const only=detectPrepItems("5월 3일(금)~8일(수) 만 있음",2026).items;
+    expect(only.some(item=>item.text==="5월 3일(금)")).toBe(false);
+  });
 });

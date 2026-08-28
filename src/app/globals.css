@@ -202,6 +202,18 @@ button,input,textarea,select { font:inherit; } button,a { -webkit-tap-highlight-
 .file-drop strong{font-size:15px;word-break:break-all}
 .file-drop-badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#2e7d32;color:#fff;font-size:11px;font-weight:700;margin-bottom:2px}
 
+/* 무엇을 바꾸고 무엇을 비우는지 한눈에 보여 주는 요약 */
+.prep-summary{display:grid;gap:8px}
+.prep-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 12px;border:1px solid #e5e9f0;border-radius:8px;background:#fafbfd;font-size:14px}
+.prep-tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;color:#fff;flex:0 0 auto}
+.prep-tag.is-change{background:#1b5e20}
+.prep-tag.is-clear{background:#8a5a00}
+.prep-detail{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto}
+.prep-pair{display:inline-flex;align-items:center;gap:6px}
+.prep-pair code{background:#fee;padding:2px 6px;border-radius:4px;font-size:12px}
+.prep-line .help{margin:0;font-size:12px;max-width:520px;text-align:right}
+
 /* 비울 항목 — 새 값을 바로 적을 수 있게 한 줄로 촘촘히 둔다 */
 .fill-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px}
 .fill-row{display:flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid #e5e9f0;

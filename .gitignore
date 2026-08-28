@@ -53,3 +53,6 @@ next-env.d.ts
 
 # 테스트용 실제 학교 문서 (개인정보 포함 가능 · 저장소에 올리지 않음)
 hwpx예시/
+
+# 교체 전 원본 편집기 백업 (로컬 보관용)
+public/rhwp-stock-backup/

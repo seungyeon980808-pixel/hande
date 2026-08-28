@@ -19,6 +19,17 @@ const label=(date:string)=>`${Number(date.slice(5,7))}월 ${Number(date.slice(8,
 const monthOf=(date:string)=>Number(date.slice(5,7));
 /** 학년도는 3월에 시작해 다음 해 2월에 끝난다. */
 const SCHOOL_MONTHS=[3,4,5,6,7,8,9,10,11,12,1,2];
+const WEEK=["일","월","화","수","목","금","토"];
+
+/** 그 달의 1일이 무슨 요일인지에 맞춰 빈 칸을 채운 달력 칸을 만든다. */
+function buildCalendar(year:number,month:number){
+  const first=new Date(year,month-1,1);
+  const days=new Date(year,month,0).getDate();
+  const cells:(number|null)[]=Array(first.getDay()).fill(null);
+  for(let day=1;day<=days;day++)cells.push(day);
+  while(cells.length%7!==0)cells.push(null);
+  return cells;
+}
 
 /**
  * 학사일정을 옆에 띄워 실제 날짜와 요일을 보면서 고치게 한다.
@@ -31,6 +42,7 @@ export function SchedulePopover({year}:{year:number}){
   const [busy,setBusy]=useState(false);
   const [query,setQuery]=useState("");
   const [month,setMonth]=useState<number|null>(null);
+  const [view,setView]=useState<"달력"|"목록">("달력");
   const box=useRef<HTMLDivElement>(null);
   const button=useRef<HTMLButtonElement>(null);
 
@@ -73,6 +85,17 @@ export function SchedulePopover({year}:{year:number}){
     return SCHOOL_MONTHS.filter(value=>has.has(value));
   },[events]);
 
+  /** 달력 칸에 표시할, 날짜별 행사 모음 */
+  const byDate=useMemo(()=>{
+    const map=new Map<string,string[]>();
+    for(const event of events??[]){
+      const list=map.get(event.date);
+      if(list)list.push(event.name);
+      else map.set(event.date,[event.name]);
+    }
+    return map;
+  },[events]);
+
   const groups=useMemo(()=>groupByDate(events??[]).filter(([date,entry])=>{
     if(month!==null&&monthOf(date)!==month)return false;
     if(!query)return true;
@@ -95,6 +118,33 @@ export function SchedulePopover({year}:{year:number}){
           <button type="button" className={month===null?"is-on":""} onClick={()=>setMonth(null)}>전체</button>
           {months.map(value=><button key={value} type="button" className={month===value?"is-on":""} onClick={()=>setMonth(value)}>{value}월</button>)}
         </div>}
+        <div className="schedule-views">
+          <button type="button" className={view==="달력"?"is-on":""} onClick={()=>setView("달력")}>달력</button>
+          <button type="button" className={view==="목록"?"is-on":""} onClick={()=>setView("목록")}>목록</button>
+        </div>
+        {view==="달력"&&month!==null&&(()=>{
+          // 3~12월은 그해, 1~2월은 다음 해에 속한다.
+          const calYear=month>=3?year:year+1;
+          const cells=buildCalendar(calYear,month);
+          const pad=(value:number)=>String(value).padStart(2,"0");
+          return <div className="schedule-cal">
+            <div className="cal-head">{WEEK.map((day,index)=><span key={day} className={index===0||index===6?"is-weekend":""}>{day}</span>)}</div>
+            <div className="cal-grid">
+              {cells.map((day,index)=>{
+                if(day===null)return <span key={`empty-${index}`} className="cal-cell is-empty"/>;
+                const key=`${calYear}-${pad(month)}-${pad(day)}`;
+                const names=byDate.get(key);
+                const weekend=index%7===0||index%7===6;
+                return <span key={key} className={`cal-cell${weekend?" is-weekend":""}${names?" has-event":""}`} title={names?names.join(" · "):undefined}>
+                  <b>{day}</b>
+                  {names&&<i>{names[0]}{names.length>1?` 외 ${names.length-1}`:""}</i>}
+                </span>;
+              })}
+            </div>
+          </div>;
+        })()}
+        {view==="달력"&&month===null&&<p className="help" style={{padding:"8px 12px"}}>달력으로 보려면 위에서 달을 고르세요.</p>}
+        {view==="목록"&&<>
         <input className="schedule-search" value={query} onChange={event=>setQuery(event.target.value)} placeholder="행사 이름이나 날짜로 찾기"/>
         <div className="schedule-list">
           {groups.length===0
@@ -106,8 +156,9 @@ export function SchedulePopover({year}:{year:number}){
               <span className="schedule-names">{entry.names.join(" · ")}</span>
             </div>)}
         </div>
+        </>}
       </>}
-      <p className="help" style={{padding:"8px 12px",margin:0,borderTop:"1px solid #e5e9f0"}}>토·일요일은 빨간색입니다. 날짜를 정할 때 참고하세요.</p>
+      <p className="help" style={{padding:"8px 12px",margin:0,borderTop:"1px solid #e5e9f0"}}>토·일요일은 빨간색입니다. 칸에 마우스를 올리면 그날 행사가 모두 보입니다.</p>
     </div>}
   </>;
 }

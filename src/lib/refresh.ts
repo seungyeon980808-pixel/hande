@@ -186,6 +186,21 @@ export function detectPrepItems(text:string,targetYear:number):PrepItem[]{
   const seen=new Set<string>();
   const add=(item:PrepItem)=>{if(seen.has(item.text))return;seen.add(item.text);items.push(item)};
 
+  /**
+   * 날짜는 "4월 14일(월)" 안에 "4월 14일" 이 또 잡히는 식으로 겹쳐 걸린다.
+   * 긴 쪽만 남기면 같은 자리를 두 번 보여 주지 않는다.
+   */
+  const dropOverlapping=(list:PrepItem[])=>{
+    const dates=list.filter(item=>item.kind==="날짜").sort((a,b)=>b.text.length-a.text.length);
+    const keep:PrepItem[]=[];
+    for(const item of dates){
+      if(keep.some(kept=>kept.text.includes(item.text)))continue;
+      keep.push(item);
+    }
+    const keepSet=new Set(keep.map(item=>item.text));
+    return list.filter(item=>item.kind!=="날짜"||keepSet.has(item.text));
+  };
+
   // 문서에 실제로 있는 연도 중 가장 큰 값을 작년으로 본다.
   const years=[...text.matchAll(/(?<!\d)(20\d{2})(?!\d)/g)].map(match=>Number(match[1]));
   const source=years.length?Math.max(...years):targetYear-1;
@@ -239,5 +254,5 @@ export function detectPrepItems(text:string,targetYear:number):PrepItem[]{
       suggested:"",reason:"담당자가 바뀌었다면 비우고, 그대로라면 체크를 해제하세요."});
   }
 
-  return items;
+  return dropOverlapping(items);
 }

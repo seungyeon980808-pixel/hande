@@ -87,7 +87,7 @@ describe("작년 양식 갱신",()=>{
   
 
   it("올해 양식으로 만들 항목을 종류별로 찾는다",()=>{
-    const items=detectPrepItems("2025학년도 제5회 계획 · 회의 4월 3일(수) · 담당 김민정 선생님",2026);
+    const {items}=detectPrepItems("2025학년도 제5회 계획 · 회의 4월 3일(수) · 담당 김민정 선생님",2026);
     expect(items.find(item=>item.text==="2025학년도")?.kind).toBe("연도");
     expect(items.find(item=>item.text==="제5회")?.kind).toBe("회차");
     expect(items.find(item=>item.text==="4월 3일(수)")?.kind).toBe("날짜");
@@ -95,7 +95,7 @@ describe("작년 양식 갱신",()=>{
   });
 
   it("연도와 회차는 고를 값을 주고, 날짜와 이름은 비운다",()=>{
-    const items=detectPrepItems("2025학년도 4월 3일(수)",2026);
+    const {items}=detectPrepItems("2025학년도 4월 3일(수)",2026);
     const year=items.find(item=>item.text==="2025학년도");
     expect(year?.suggested).toBe("2026학년도");
     expect(year?.options).toContain("2026학년도");
@@ -103,10 +103,15 @@ describe("작년 양식 갱신",()=>{
   });
 
   it("점으로 쓴 날짜도 찾는다",()=>{
-    expect(detectPrepItems("일시 : 4. 24.(수) 아침자습",2026).some(item=>item.kind==="날짜")).toBe(true);
+    expect(detectPrepItems("일시 : 4. 24.(수) 아침자습",2026).items.some(item=>item.kind==="날짜")).toBe(true);
   });
 
   it("업무 용어를 사람 이름으로 잘못 잡지 않는다",()=>{
-    expect(detectPrepItems("담당교과 교사 확인 · 성적관리 부장 결재",2026).some(item=>item.kind==="이름")).toBe(false);
+    expect(detectPrepItems("담당교과 교사 확인 · 성적관리 부장 결재",2026).items.some(item=>item.kind==="이름")).toBe(false);
+  });
+
+  it("문서에 있는 연도를 작년으로 잡는다",()=>{
+    expect(detectPrepItems("2024학년도 계획",2026).sourceYear).toBe(2024);
+    expect(detectPrepItems("연도가 없는 문서",2026).sourceYear).toBe(2025);
   });
 });

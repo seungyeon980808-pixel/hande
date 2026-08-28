@@ -181,7 +181,7 @@ export type PrepItem={
  * 작년 완성본 하나로 올해 양식을 만들기 위한 항목을 모두 찾는다.
  * 연도·회차는 바꿀 값을 고르게 하고, 날짜·이름은 비우기를 기본으로 한다.
  */
-export function detectPrepItems(text:string,targetYear:number):PrepItem[]{
+export function detectPrepItems(text:string,targetYear:number){
   const items:PrepItem[]=[];
   const seen=new Set<string>();
   const add=(item:PrepItem)=>{if(seen.has(item.text))return;seen.add(item.text);items.push(item)};
@@ -254,5 +254,5 @@ export function detectPrepItems(text:string,targetYear:number):PrepItem[]{
       suggested:"",reason:"담당자가 바뀌었다면 비우고, 그대로라면 체크를 해제하세요."});
   }
 
-  return dropOverlapping(items);
+  return {items:dropOverlapping(items),sourceYear:source};
 }

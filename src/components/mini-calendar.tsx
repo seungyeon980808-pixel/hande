@@ -130,3 +130,45 @@ export function DatePicker({schoolYear,value,onChange,placeholder,disabled}:{
     </div>}
   </span>;
 }
+
+/**
+ * 작년 원본 날짜를 보여 주고, 눌러서 그해 달력으로 확인만 하게 한다.
+ * 고르는 기능은 없다. 작년 기준이라는 것을 알리는 이름표가 함께 붙는다.
+ */
+export function SourceDate({schoolYear,text}:{schoolYear:number;text:string}){
+  const [open,setOpen]=useState(false);
+  const [events,setEvents]=useState<SchoolEvent[]>([]);
+  const [month,setMonth]=useState(3);
+  const box=useRef<HTMLDivElement>(null);
+
+  useEffect(()=>{
+    if(!open)return;
+    const onDown=(event:MouseEvent)=>{if(box.current&&!box.current.contains(event.target as Node))setOpen(false)};
+    const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")setOpen(false)};
+    document.addEventListener("mousedown",onDown);
+    window.addEventListener("keydown",onKey);
+    return()=>{document.removeEventListener("mousedown",onDown);window.removeEventListener("keydown",onKey)};
+  },[open]);
+
+  async function toggle(){
+    const next=!open;
+    setOpen(next);
+    if(!next)return;
+    const found=/(\d{1,2})\s?[월/.]/.exec(text);
+    if(found)setMonth(Number(found[1]));
+    // 작년 학사일정이 없을 수도 있다. 없으면 요일만 보여 준다.
+    if(!events.length){try{setEvents(await loadSchedule(schoolYear))}catch{setEvents([])}}
+  }
+
+  const byDate=useMemo(()=>eventsByDate(events),[events]);
+
+  return <span className="source-date" ref={box}>
+    <span className="source-tag">{schoolYear} 작년</span>
+    <button type="button" className="source-text" onClick={()=>void toggle()}
+      title={`${schoolYear}학년도 달력에서 확인`}>{text}</button>
+    {open&&<div className="date-picker-pop">
+      <p className="help" style={{margin:"0 0 6px"}}><strong>{schoolYear}학년도</strong> 달력입니다. 확인만 하는 곳이며 고를 수 없습니다.</p>
+      <MiniCalendar schoolYear={schoolYear} month={month} onMonth={setMonth} byDate={byDate}/>
+    </div>}
+  </span>;
+}

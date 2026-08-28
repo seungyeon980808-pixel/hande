@@ -6,9 +6,9 @@ import type { PrepItem } from "@/lib/refresh";
 import { FileDrop } from "./file-drop";
 import { putHandoff } from "@/lib/handoff";
 import { SchedulePopover } from "./schedule-popover";
-import { DatePicker } from "./mini-calendar";
+import { DatePicker,SourceDate } from "./mini-calendar";
 
-type Analysis={items:PrepItem[];targetYear:number};
+type Analysis={items:PrepItem[];targetYear:number;sourceYear:number};
 
 const GROUPS=[
   {kind:"연도",title:"연도 · 학년도",hint:"바꿀 값을 고르세요."},
@@ -145,7 +145,9 @@ export function PrepareClient({defaultYear}:{defaultYear:number}){
                 const value=values[item.id]??"";
                 return <div key={item.id} className={`fill-row${on?" is-on":""}`}>
                   <input type="checkbox" checked={on} onChange={()=>toggle(item.id)} aria-label={`${item.text} 바꾸기`}/>
-                  <code className="fill-from">{item.text}</code>
+                  {group.kind==="날짜"
+                    ?<SourceDate schoolYear={analysis.sourceYear} text={item.text}/>
+                    :<code className="fill-from">{item.text}</code>}
                   {item.count>1&&<em className="fill-count">{item.count}곳</em>}
                   <span aria-hidden>→</span>
                   {group.kind==="날짜"

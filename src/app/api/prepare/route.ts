@@ -31,7 +31,8 @@ export async function POST(request:Request){
       try{text=extractText(bytes)}
       catch{return Response.json({error:"한글 문서를 열지 못했습니다. 손상되었거나 지원하지 않는 형식입니다."},{status:400})}
       if(!text)return Response.json({error:"문서에서 글자를 찾지 못했습니다."},{status:400});
-      return Response.json({items:detectPrepItems(text,targetYear),targetYear});
+      const found=detectPrepItems(text,targetYear);
+      return Response.json({items:found.items,sourceYear:found.sourceYear,targetYear});
     }
 
     let accepted;

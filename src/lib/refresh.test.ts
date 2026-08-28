@@ -1,6 +1,6 @@
 import { describe,expect,it } from "vitest";
 import { strFromU8,strToU8,unzipSync,zipSync } from "fflate";
-import { applySuggestions,blankOut,detectBlankTargets,detectByRules,detectWarnings,extractText,renameBySuggestions } from "./refresh";
+import { applySuggestions,detectByRules,detectPrepItems,detectWarnings,extractText,renameBySuggestions } from "./refresh";
 
 const build=(body:string)=>zipSync({
   "Contents/section0.xml":strToU8(body),
@@ -84,28 +84,29 @@ describe("작년 양식 갱신",()=>{
     expect(renameBySuggestions("2025_독서토론계획",[{from:"2025",to:"2026"}])).toBe("2026_독서토론계획");
   });
 
-  it("빈 양식으로 만들 값을 종류별로 찾는다",()=>{
-    const found=detectBlankTargets("2025학년도 계획 · 회의 4월 3일(수) · 담당 김민정 선생님");
-    expect(found.find(t=>t.text==="4월 3일(수)")?.kind).toBe("날짜");
-    expect(found.find(t=>t.text==="김민정")?.kind).toBe("이름");
+  
+
+  it("올해 양식으로 만들 항목을 종류별로 찾는다",()=>{
+    const items=detectPrepItems("2025학년도 제5회 계획 · 회의 4월 3일(수) · 담당 김민정 선생님",2026);
+    expect(items.find(item=>item.text==="2025학년도")?.kind).toBe("연도");
+    expect(items.find(item=>item.text==="제5회")?.kind).toBe("회차");
+    expect(items.find(item=>item.text==="4월 3일(수)")?.kind).toBe("날짜");
+    expect(items.find(item=>item.text==="김민정")?.kind).toBe("이름");
+  });
+
+  it("연도와 회차는 고를 값을 주고, 날짜와 이름은 비운다",()=>{
+    const items=detectPrepItems("2025학년도 4월 3일(수)",2026);
+    const year=items.find(item=>item.text==="2025학년도");
+    expect(year?.suggested).toBe("2026학년도");
+    expect(year?.options).toContain("2026학년도");
+    expect(items.find(item=>item.text==="4월 3일(수)")?.suggested).toBe("");
+  });
+
+  it("점으로 쓴 날짜도 찾는다",()=>{
+    expect(detectPrepItems("일시 : 4. 24.(수) 아침자습",2026).some(item=>item.kind==="날짜")).toBe(true);
   });
 
   it("업무 용어를 사람 이름으로 잘못 잡지 않는다",()=>{
-    const found=detectBlankTargets("담당교과 교사 확인 · 성적관리 부장 결재");
-    expect(found.some(t=>t.kind==="이름")).toBe(false);
-  });
-
-  it("고른 값만 비우고 항목 이름과 표는 남긴다",()=>{
-    const source=build("<p>단계 학업성적관리위원회 4월 3일(수) 비고</p>");
-    const result=unzipSync(blankOut(source,[{text:"4월 3일(수)"}]));
-    const xml=strFromU8(result["Contents/section0.xml"]);
-    expect(xml).toContain("학업성적관리위원회");
-    expect(xml).not.toContain("4월 3일");
-    expect([...result["BinData/image.bin"]]).toEqual([1,2,3]);
-  });
-
-  it("비울 값이 없으면 원본을 그대로 둔다",()=>{
-    const source=build("<p>4월 3일(수)</p>");
-    expect(blankOut(source,[])).toBe(source);
+    expect(detectPrepItems("담당교과 교사 확인 · 성적관리 부장 결재",2026).some(item=>item.kind==="이름")).toBe(false);
   });
 });

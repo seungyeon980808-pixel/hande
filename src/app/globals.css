@@ -171,3 +171,27 @@ button,input,textarea,select { font:inherit; } button,a { -webkit-tap-highlight-
 .schedule-date{flex:0 0 108px;font-weight:700;color:#1b3a6b}
 .schedule-date.is-weekend{color:#c62828}
 .schedule-names{flex:1;color:#40506a;min-width:0}
+
+/* 사이드바 하위 메뉴 */
+.nav-group{display:contents}
+.nav-children{margin:0 0 4px 10px;padding-left:8px;border-left:2px solid var(--line)}
+.nav-item.nav-child{font-size:13px;padding:9px 12px;color:#5a6b82}
+.nav-item.nav-child.active{color:var(--navy);background:var(--blue-soft);font-weight:700}
+@media (max-width:800px){
+  /* 좁은 화면에서는 사이드바가 가로 막대가 되므로 하위 메뉴도 나란히 둔다 */
+  .nav-group{display:contents}
+  .nav-children{display:flex;gap:3px;margin:0;padding:0;border-left:0}
+  .nav-item.nav-child{flex:1 0 auto;min-width:88px}
+}
+/* 파일 선택 영역 — 클릭과 드래그앤드롭을 함께 받는다 */
+.file-drop{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  padding:22px 16px;border:2px dashed #b9c6d8;border-radius:10px;background:#f8fafd;
+  cursor:pointer;text-align:center;transition:border-color .15s,background .15s}
+.file-drop:hover{border-color:var(--navy,#1b3a6b);background:#eef4fc}
+.file-drop.is-over{border-color:var(--navy,#1b3a6b);background:#e3edfa;border-style:solid}
+.file-drop.is-picked{border-style:solid;border-color:#2e7d32;background:#f2fbf3}
+.file-drop input[type="file"]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.file-drop-icon{font-size:22px;line-height:1;color:#8296b0;font-weight:700}
+.file-drop.is-picked .file-drop-icon{color:#2e7d32}
+.file-drop strong{font-size:15px;word-break:break-all}
+.file-drop-badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#2e7d32;color:#fff;font-size:11px;font-weight:700;margin-bottom:2px}

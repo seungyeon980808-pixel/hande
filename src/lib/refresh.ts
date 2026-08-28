@@ -113,7 +113,7 @@ export function detectWarnings(text:string,targetYear:number):Warning[]{
 
   // 3월 15일 / 3. 15. / 3/15 형태
   for(const match of text.matchAll(/(\d{1,2})\s?월\s?(\d{1,2})\s?일/g))record(match[0],Number(match[1]),Number(match[2]));
-  for(const match of text.matchAll(/(?<![\d.])(\d{1,2})\s?[./]\s?(\d{1,2})(?![\d])/g))record(match[0],Number(match[1]),Number(match[2]));
+  for(const match of text.matchAll(/(?<![\d./])(\d{1,2})\s?[./]\s?(\d{1,2})(?![\d./])/g))record(match[0],Number(match[1]),Number(match[2]));
 
   return warnings.slice(0,30);
 }
@@ -161,55 +161,6 @@ export function renameBySuggestions(baseName:string,suggestions:Pick<Suggestion,
 }
 
 function escapeXml(value:string){return value.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&apos;")}
-
-/** 빈 양식을 만들 때 지울 후보 한 건. */
-export type BlankTarget={id:string;text:string;kind:"날짜"|"연도"|"이름"|"숫자";count:number};
-
-/**
- * 작년 완성본에서 "해마다 다시 쓰는 값"을 찾는다.
- * 표 구조와 항목명은 남기고, 채워 넣은 값만 비우기 위한 후보다.
- * 지우면 되돌릴 수 없으므로 반드시 담당자 확인을 거쳐야 한다.
- */
-export function detectBlankTargets(text:string):BlankTarget[]{
-  const found:BlankTarget[]=[];
-  const seen=new Set<string>();
-  const push=(raw:string,kind:BlankTarget["kind"])=>{
-    const value=raw.trim();
-    if(!value||seen.has(value))return;
-    seen.add(value);
-    found.push({id:`blank:${value}`,text:value,kind,count:countOccurrences(text,value)});
-  };
-
-  // 날짜: 4월 3일(수) / 4월 3일 / 4. 3.
-  for(const match of text.matchAll(/\d{1,2}\s?월\s?\d{1,2}\s?일(\s?\([월화수목금토일]\))?(\s?~\s?\d{1,2}\s?일(\s?\([월화수목금토일]\))?)?/g))push(match[0],"날짜");
-  // 연도·학년도
-  for(const match of text.matchAll(/20\d{2}\s?(학년도|년도|년)?/g))push(match[0],"연도");
-  // 사람 이름: 3글자 이름 뒤에 직위가 붙는 경우만. 업무 용어를 이름으로 잘못 잡지 않도록
-  // 흔한 성으로 시작하는 세 글자만 인정하고, 업무 용어는 제외한다.
-  const NOT_NAME=new Set(["담당교과","성적관리","학년부장","교육과정","생활지도"]);
-  const SURNAME="김이박최정강조윤장임한오서신권황안송류전홍고문양손배백허유남심노정하곽성차주우구신임나전민유진지엄채원천방공강";
-  for(const match of text.matchAll(/[가-힣]{3}(?=\s{0,2}(선생님|교사|부장|위원|주무관|장학사))/g)){
-    const name=match[0];
-    if(NOT_NAME.has(name)||!SURNAME.includes(name[0]))continue;
-    push(name,"이름");
-  }
-
-  return found.slice(0,60);
-}
-
-/** 승인한 값을 문서에서 지워 빈 양식을 만든다. 표와 항목명은 그대로 남는다. */
-export function blankOut(source:Uint8Array,targets:{text:string}[]):Uint8Array{
-  const usable=targets.filter(t=>t.text).map(t=>({from:escapeXml(t.text),to:""}));
-  if(!usable.length)return source;
-  const files=unzipSync(source);
-  for(const [key,value] of Object.entries(files)){
-    if(!key.endsWith(".xml"))continue;
-    const xml=strFromU8(value);
-    const next=replaceOnce(xml,usable);
-    if(next!==xml)files[key]=strToU8(next);
-  }
-  return zipSync(files,{level:6});
-}
 
 /** 올해 양식을 만들 때 다룰 항목 한 건. */
 export type PrepItem={
@@ -270,8 +221,9 @@ export function detectPrepItems(text:string,targetYear:number):PrepItem[]{
   }
 
   // 날짜는 요일이 달라지므로 비우고 새로 정하게 한다.
-  // "4월 24일(수)" 뿐 아니라 학교 문서에 흔한 "4. 24.(수)" 형태도 함께 찾는다.
-  const DATE=/\d{1,2}\s?월\s?\d{1,2}\s?일(\s?\([월화수목금토일]\))?(\s?~\s?\d{1,2}\s?일(\s?\([월화수목금토일]\))?)?|(?<![\d.])\d{1,2}\.\s?\d{1,2}\.(\s?\([월화수목금토일]\))?(\s?~\s?\d{1,2}\.\s?\d{1,2}\.(\s?\([월화수목금토일]\))?)?/g;
+  // 학교 문서는 날짜를 여러 방식으로 쓴다. 표 안에서는 특히 "4/25(금)" 이 흔하다.
+  //   4월 25일(금) · 4월 25일~29일 · 4. 25.(금) · 4/25(금) · 4/25~4/29
+  const DATE=/\d{1,2}\s?월\s?\d{1,2}\s?일(\s?\([월화수목금토일]\))?(\s?~\s?(\d{1,2}\s?월\s?)?\d{1,2}\s?일(\s?\([월화수목금토일]\))?)?|(?<![\d/])\d{1,2}\s?\/\s?\d{1,2}(\s?\([월화수목금토일]\))?(\s?~\s?\d{1,2}\s?\/\s?\d{1,2}(\s?\([월화수목금토일]\))?)?(?![\d/])|(?<![\d.])\d{1,2}\.\s?\d{1,2}\.(\s?\([월화수목금토일]\))?(\s?~\s?\d{1,2}\.\s?\d{1,2}\.(\s?\([월화수목금토일]\))?)?/g;
   for(const match of text.matchAll(DATE)){
     add({id:`date:${match[0]}`,text:match[0],kind:"날짜",count:countOccurrences(text,match[0]),
       suggested:"",reason:"해가 바뀌면 요일이 달라집니다. 비우고 새 학사일정에 맞춰 적으세요."});

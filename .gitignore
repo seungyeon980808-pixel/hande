@@ -48,3 +48,6 @@ next-env.d.ts
 # local AI coding-tool settings
 /.codex/
 /.agents/
+
+# 테스트용 실제 학교 문서 (개인정보 포함 가능 · 저장소에 올리지 않음)
+hwpx예시/

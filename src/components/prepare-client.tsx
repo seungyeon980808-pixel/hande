@@ -6,6 +6,7 @@ import type { PrepItem } from "@/lib/refresh";
 import { FileDrop } from "./file-drop";
 import { putHandoff } from "@/lib/handoff";
 import { SchedulePopover } from "./schedule-popover";
+import { DatePicker } from "./mini-calendar";
 
 type Analysis={items:PrepItem[];targetYear:number};
 
@@ -147,9 +148,13 @@ export function PrepareClient({defaultYear}:{defaultYear:number}){
                   <code className="fill-from">{item.text}</code>
                   {item.count>1&&<em className="fill-count">{item.count}곳</em>}
                   <span aria-hidden>→</span>
-                  <input className="fill-input" type="text" value={value} disabled={!on}
-                    placeholder={group.kind==="날짜"?"새 날짜 (비우려면 그대로)":"새 이름 (비우려면 그대로)"}
-                    onChange={event=>setValues(prev=>({...prev,[item.id]:event.target.value}))}/>
+                  {group.kind==="날짜"
+                    ?<DatePicker schoolYear={Number(year)} value={value} disabled={!on}
+                       placeholder="달력에서 고르기 (비우려면 그대로)"
+                       onChange={next=>setValues(prev=>({...prev,[item.id]:next}))}/>
+                    :<input className="fill-input" type="text" value={value} disabled={!on}
+                       placeholder="새 이름 (비우려면 그대로)"
+                       onChange={event=>setValues(prev=>({...prev,[item.id]:event.target.value}))}/>}
                 </div>;
               })}
             </div>

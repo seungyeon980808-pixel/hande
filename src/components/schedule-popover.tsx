@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect,useMemo,useRef,useState } from "react";
-
-type SchoolEvent={date:string;name:string;weekday:string};
+import { eventsByDate,loadSchedule,MiniCalendar,SCHOOL_MONTHS,type SchoolEvent } from "./mini-calendar";
 
 /** 같은 날 여러 행사가 있으므로 날짜별로 묶는다. */
 function groupByDate(events:SchoolEvent[]){
@@ -17,19 +16,7 @@ function groupByDate(events:SchoolEvent[]){
 
 const label=(date:string)=>`${Number(date.slice(5,7))}월 ${Number(date.slice(8,10))}일`;
 const monthOf=(date:string)=>Number(date.slice(5,7));
-/** 학년도는 3월에 시작해 다음 해 2월에 끝난다. */
-const SCHOOL_MONTHS=[3,4,5,6,7,8,9,10,11,12,1,2];
-const WEEK=["일","월","화","수","목","금","토"];
 
-/** 그 달의 1일이 무슨 요일인지에 맞춰 빈 칸을 채운 달력 칸을 만든다. */
-function buildCalendar(year:number,month:number){
-  const first=new Date(year,month-1,1);
-  const days=new Date(year,month,0).getDate();
-  const cells:(number|null)[]=Array(first.getDay()).fill(null);
-  for(let day=1;day<=days;day++)cells.push(day);
-  while(cells.length%7!==0)cells.push(null);
-  return cells;
-}
 
 /**
  * 학사일정을 옆에 띄워 실제 날짜와 요일을 보면서 고치게 한다.
@@ -62,14 +49,12 @@ export function SchedulePopover({year}:{year:number}){
   async function load(){
     setBusy(true);setError("");
     try{
-      const response=await fetch(`/api/schedule?from=${year}-03-01&to=${year+1}-02-28`);
-      const body=await response.json();
-      if(!response.ok)throw new Error(body.error);
-      setEvents(body.events);
+      const loaded=await loadSchedule(year);
+      setEvents(loaded);
       // 오늘이 학년도 안이면 이번 달부터 보여 준다.
       const now=new Date();
       const current=now.getFullYear()===year||now.getFullYear()===year+1?now.getMonth()+1:null;
-      setMonth(current&&(body.events as SchoolEvent[]).some(item=>monthOf(item.date)===current)?current:null);
+      setMonth(current&&loaded.some(item=>monthOf(item.date)===current)?current:null);
     }catch(cause){setError(cause instanceof Error?cause.message:"학사일정을 불러오지 못했습니다.")}
     finally{setBusy(false)}
   }
@@ -85,16 +70,7 @@ export function SchedulePopover({year}:{year:number}){
     return SCHOOL_MONTHS.filter(value=>has.has(value));
   },[events]);
 
-  /** 달력 칸에 표시할, 날짜별 행사 모음 */
-  const byDate=useMemo(()=>{
-    const map=new Map<string,string[]>();
-    for(const event of events??[]){
-      const list=map.get(event.date);
-      if(list)list.push(event.name);
-      else map.set(event.date,[event.name]);
-    }
-    return map;
-  },[events]);
+  const byDate=useMemo(()=>eventsByDate(events??[]),[events]);
 
   const groups=useMemo(()=>groupByDate(events??[]).filter(([date,entry])=>{
     if(month!==null&&monthOf(date)!==month)return false;
@@ -114,7 +90,7 @@ export function SchedulePopover({year}:{year:number}){
       {busy&&<p className="help" style={{padding:"10px 12px"}}>불러오는 중...</p>}
       {error&&<div className="error" style={{margin:"10px 12px"}}>{error}</div>}
       {events&&!busy&&<>
-        {months.length>0&&<div className="schedule-months">
+        {view==="목록"&&months.length>0&&<div className="schedule-months">
           <button type="button" className={month===null?"is-on":""} onClick={()=>setMonth(null)}>전체</button>
           {months.map(value=><button key={value} type="button" className={month===value?"is-on":""} onClick={()=>setMonth(value)}>{value}월</button>)}
         </div>}
@@ -122,28 +98,9 @@ export function SchedulePopover({year}:{year:number}){
           <button type="button" className={view==="달력"?"is-on":""} onClick={()=>setView("달력")}>달력</button>
           <button type="button" className={view==="목록"?"is-on":""} onClick={()=>setView("목록")}>목록</button>
         </div>
-        {view==="달력"&&month!==null&&(()=>{
-          // 3~12월은 그해, 1~2월은 다음 해에 속한다.
-          const calYear=month>=3?year:year+1;
-          const cells=buildCalendar(calYear,month);
-          const pad=(value:number)=>String(value).padStart(2,"0");
-          return <div className="schedule-cal">
-            <div className="cal-head">{WEEK.map((day,index)=><span key={day} className={index===0||index===6?"is-weekend":""}>{day}</span>)}</div>
-            <div className="cal-grid">
-              {cells.map((day,index)=>{
-                if(day===null)return <span key={`empty-${index}`} className="cal-cell is-empty"/>;
-                const key=`${calYear}-${pad(month)}-${pad(day)}`;
-                const names=byDate.get(key);
-                const weekend=index%7===0||index%7===6;
-                return <span key={key} className={`cal-cell${weekend?" is-weekend":""}${names?" has-event":""}`} title={names?names.join(" · "):undefined}>
-                  <b>{day}</b>
-                  {names&&<i>{names[0]}{names.length>1?` 외 ${names.length-1}`:""}</i>}
-                </span>;
-              })}
-            </div>
-          </div>;
-        })()}
-        {view==="달력"&&month===null&&<p className="help" style={{padding:"8px 12px"}}>달력으로 보려면 위에서 달을 고르세요.</p>}
+        {view==="달력"&&<div className="schedule-cal">
+          <MiniCalendar schoolYear={year} month={month??3} onMonth={setMonth} byDate={byDate}/>
+        </div>}
         {view==="목록"&&<>
         <input className="schedule-search" value={query} onChange={event=>setQuery(event.target.value)} placeholder="행사 이름이나 날짜로 찾기"/>
         <div className="schedule-list">

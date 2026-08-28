@@ -23,21 +23,13 @@ export function ReferenceViewer({token,personId}:{token:string;personId:string})
         const bytes=await response.arrayBuffer();
         const {createEditor}=await import("@rhwp/editor");
         if(!active||!container.current)return;
-        const boxHeight=container.current.clientHeight;
-        const instance=await createEditor(container.current,{height:boxHeight>200?`${boxHeight}px`:"590px",studioUrl:process.env.NEXT_PUBLIC_RHWP_STUDIO_URL||"https://edwardkim.github.io/rhwp/"});
+        const instance=await createEditor(container.current,{height:"100%",studioUrl:process.env.NEXT_PUBLIC_RHWP_STUDIO_URL||"https://edwardkim.github.io/rhwp/"});
         viewer.current=instance;
         await instance.loadFile(bytes,name);
         if(active)setStatus(name);
       }catch(cause){if(active)setError(cause instanceof Error?cause.message:"작년 자료를 열지 못했습니다.")}
     })();
-    const fit=()=>{
-      const frame=container.current?.querySelector("iframe");
-      const height=container.current?.clientHeight??0;
-      if(frame&&height>200)frame.style.height=`${height}px`;
-    };
-    const timer=window.setInterval(fit,400);
-    window.addEventListener("resize",fit);
-    return()=>{active=false;window.clearInterval(timer);window.removeEventListener("resize",fit);viewer.current?.destroy();viewer.current=null};
+    return()=>{active=false;viewer.current?.destroy();viewer.current=null};
   },[personId,token]);
 
   return <div>

@@ -30,6 +30,9 @@ export function SchedulePopover({year}:{year:number}){
   const [query,setQuery]=useState("");
   const [month,setMonth]=useState<number|null>(null);
   const [view,setView]=useState<"달력"|"목록">("달력");
+  // 편집 중인 문서를 가리면 창을 끌어서 옮길 수 있다.
+  const [spot,setSpot]=useState<{x:number;y:number}|null>(null);
+  const drag=useRef<{dx:number;dy:number}|null>(null);
   const box=useRef<HTMLDivElement>(null);
   const button=useRef<HTMLButtonElement>(null);
 
@@ -78,14 +81,35 @@ export function SchedulePopover({year}:{year:number}){
     return entry.names.some(name=>name.includes(query))||label(date).includes(query);
   }),[events,month,query]);
 
+  function startDrag(event:React.PointerEvent){
+    const rect=box.current?.getBoundingClientRect();
+    if(!rect)return;
+    drag.current={dx:event.clientX-rect.left,dy:event.clientY-rect.top};
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  }
+  function onDrag(event:React.PointerEvent){
+    if(!drag.current||!box.current)return;
+    const width=box.current.offsetWidth,height=box.current.offsetHeight;
+    // 창이 화면 밖으로 완전히 나가지 않도록 가둔다.
+    const x=Math.min(Math.max(event.clientX-drag.current.dx,8),window.innerWidth-width-8);
+    const y=Math.min(Math.max(event.clientY-drag.current.dy,8),window.innerHeight-Math.min(height,120)-8);
+    setSpot({x,y});
+  }
+  function endDrag(event:React.PointerEvent){
+    drag.current=null;
+    (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+  }
+
   return <>
     <button ref={button} type="button" className="btn btn-secondary" onClick={toggle}>
       {open?"학사일정 닫기":`${year}학년도 학사일정 보기`}
     </button>
-    {open&&<div className="schedule-pop" ref={box}>
-      <div className="schedule-pop-head">
+    {open&&<div className="schedule-pop" ref={box}
+      style={spot?{left:spot.x,top:spot.y,right:"auto"}:undefined}>
+      <div className="schedule-pop-head is-drag" onPointerDown={startDrag} onPointerMove={onDrag} onPointerUp={endDrag}>
         <strong>{year}학년도 학사일정</strong>
-        <button type="button" className="schedule-close" onClick={()=>setOpen(false)} aria-label="닫기">×</button>
+        <span className="help drag-hint">끌어서 옮기기</span>
+        <button type="button" className="schedule-close" onPointerDown={event=>event.stopPropagation()} onClick={()=>setOpen(false)} aria-label="닫기">×</button>
       </div>
       {busy&&<p className="help" style={{padding:"10px 12px"}}>불러오는 중...</p>}
       {error&&<div className="error" style={{margin:"10px 12px"}}>{error}</div>}

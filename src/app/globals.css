@@ -146,8 +146,11 @@ button,input,textarea,select { font:inherit; } button,a { -webkit-tap-highlight-
 /* 좌우 두 칸이 같은 높이를 쓰도록 높이를 아래까지 전달한다 */
 .editor-fullscreen .side-by-side{flex:1;min-height:0;align-items:stretch}
 .editor-fullscreen .side-pane{min-height:0;height:100%;display:flex;flex-direction:column}
-.editor-fullscreen .side-pane>div{display:flex;flex-direction:column;min-height:0;flex:1}
-.editor-fullscreen .side-pane-head{flex:0 0 auto}
+/* 왼쪽 작년 자료는 뷰어가 감싼 div 를 한 겹 더 두므로 그 겹에도 높이를 잇는다.
+   제목 줄까지 늘어나지 않도록 클래스 없는 겹만 고른다. */
+.editor-fullscreen .side-pane>div:not([class]){display:flex;flex-direction:column;min-height:0;flex:1}
+.editor-fullscreen .side-pane>.side-pane-head,
+.editor-fullscreen .side-pane>div>.side-pane-head{flex:0 0 auto}
 
 /* 편집기 컨테이너와 그 안의 iframe 은 인라인 높이(590px)를 덮어써야 한다 */
 .editor-fullscreen .editor-box{flex:1;min-height:0 !important;height:auto}
@@ -163,6 +166,8 @@ button,input,textarea,select { font:inherit; } button,a { -webkit-tap-highlight-
   display:flex;flex-direction:column;max-height:min(560px,calc(100vh - 130px));overflow:hidden}
 .schedule-pop-head{display:flex;align-items:center;justify-content:space-between;gap:8px;
   padding:10px 12px;border-bottom:1px solid #e5e9f0;background:#f7f9fc;flex:0 0 auto}
+.schedule-pop-head.is-drag{cursor:move;touch-action:none;user-select:none}
+.schedule-pop-head .drag-hint{margin-left:auto;font-size:11px;color:#8296b0}
 .schedule-close{border:0;background:none;font-size:20px;line-height:1;cursor:pointer;color:#607080;padding:0 4px}
 .schedule-months{display:flex;flex-wrap:wrap;gap:4px;padding:10px 12px 4px;flex:0 0 auto}
 .schedule-months button{border:1px solid #d8dee9;background:#fff;border-radius:999px;

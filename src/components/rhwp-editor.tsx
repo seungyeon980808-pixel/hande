@@ -24,6 +24,8 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
   const [busy,setBusy]=useState(false);
   const [sideBySide,setSideBySide]=useState(hasReference);
   const [fullscreen,setFullscreen]=useState(false);
+  // 학사일정 창이 오른쪽에 뜨므로 작성 문서를 왼쪽으로 보낼 수 있게 한다.
+  const [swapped,setSwapped]=useState(false);
 
   const saveDraft=useCallback(async(manual:boolean)=>{
     if(!editor.current||!draftKey.current||saving.current)return;
@@ -61,8 +63,7 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
         // 개발 모드의 이중 실행이나 재렌더로 편집기가 두 번 생기는 것을 막는다.
         if(!container.current||editor.current)return;
         container.current.replaceChildren();
-        const boxHeight=container.current.clientHeight;
-        const instance=await createEditor(container.current,{height:boxHeight>200?`${boxHeight}px`:"590px",studioUrl:process.env.NEXT_PUBLIC_RHWP_STUDIO_URL||"https://edwardkim.github.io/rhwp/"});
+        const instance=await createEditor(container.current,{height:"100%",studioUrl:process.env.NEXT_PUBLIC_RHWP_STUDIO_URL||"https://edwardkim.github.io/rhwp/"});
         editor.current=instance;
         const draftResponse=await fetch(`/api/collect/${token}/draft?teacherId=${encodeURIComponent(person.id)}&draftKey=${encodeURIComponent(key)}`);
         let documentResponse=draftResponse;
@@ -124,22 +125,6 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
     return {bytes:await response.arrayBuffer(),name:decodeURIComponent(response.headers.get("X-Document-Name")||"작년자료.hwpx")};
   }
 
-  // 화면 크기나 전체화면 전환에 맞춰 편집기 높이를 다시 잡는다.
-  // 편집기는 iframe 을 픽셀 높이로 그리므로 CSS 만으로는 따라오지 않는다.
-  useEffect(()=>{
-    const fit=()=>{
-      const box=container.current;
-      const frame=box?.querySelector("iframe");
-      if(!box||!frame)return;
-      const height=box.clientHeight;
-      if(height>200)frame.style.height=`${height}px`;
-    };
-    fit();
-    const timer=window.setTimeout(fit,60);
-    window.addEventListener("resize",fit);
-    return()=>{window.clearTimeout(timer);window.removeEventListener("resize",fit)};
-  },[fullscreen,sideBySide,ready]);
-
   // Esc 로 전체화면 해제
   useEffect(()=>{
     if(!fullscreen)return;
@@ -156,6 +141,7 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
       <div className="action-buttons">
         <SchedulePopover year={targetYear}/>
         {hasReference&&<button className="btn btn-secondary" onClick={()=>setSideBySide(v=>!v)}>{sideBySide?"작년 자료 닫기":"작년 자료 열기"}</button>}
+        {hasReference&&sideBySide&&<button className="btn btn-secondary" onClick={()=>setSwapped(v=>!v)}>좌우 바꾸기</button>}
         <button className="btn btn-secondary" disabled={!ready||busy||!!error} onClick={()=>{autoSaveEnabled.current=true;void saveDraft(true)}}>임시저장</button>
         <button className="btn btn-primary" disabled={!ready||busy||!!error} onClick={submit}>{busy?"제출 중...":"제출"}</button>
         <button className="btn btn-secondary" onClick={()=>setFullscreen(false)}>끝내기 (Esc)</button>
@@ -170,6 +156,7 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
       <div className="action-buttons">
         <SchedulePopover year={targetYear}/>
         {hasReference&&<button className="btn btn-secondary" onClick={()=>setSideBySide(v=>!v)}>{sideBySide?"작년 자료 닫기":"작년 자료 열기"}</button>}
+        {hasReference&&sideBySide&&<button className="btn btn-secondary" onClick={()=>setSwapped(v=>!v)}>좌우 바꾸기</button>}
         <button className="btn btn-primary" onClick={()=>setFullscreen(true)}>전체화면으로 편집</button>
       </div>
     </div>}
@@ -179,10 +166,10 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
     {!fullscreen&&saveError&&<div className="error" style={{marginBottom:12}}>{saveError}</div>}
     {!fullscreen&&done&&<div className="success" style={{marginBottom:12}}>제출 완료. 제출본은 버전으로 보관됐습니다. 다시 수정한다면 먼저 임시저장 버튼을 눌러 주세요.</div>}
     <div className="side-by-side" data-open={sideBySide&&hasReference?"true":"false"}>
-      {sideBySide&&hasReference&&<div className="side-pane">
+      {sideBySide&&hasReference&&<div className="side-pane" style={{order:swapped?2:1}}>
         <ReferenceViewer token={token} personId={person.id}/>
       </div>}
-      <div className="side-pane">
+      <div className="side-pane" style={{order:swapped?1:2}}>
         {sideBySide&&hasReference&&<div className="side-pane-head">올해 작성 문서</div>}
         <div className="editor-box" ref={container}/>
       </div>

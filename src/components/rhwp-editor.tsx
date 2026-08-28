@@ -61,7 +61,8 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
         // 개발 모드의 이중 실행이나 재렌더로 편집기가 두 번 생기는 것을 막는다.
         if(!container.current||editor.current)return;
         container.current.replaceChildren();
-        const instance=await createEditor(container.current,{height:"100%",studioUrl:process.env.NEXT_PUBLIC_RHWP_STUDIO_URL||"https://edwardkim.github.io/rhwp/"});
+        const boxHeight=container.current.clientHeight;
+        const instance=await createEditor(container.current,{height:boxHeight>200?`${boxHeight}px`:"590px",studioUrl:process.env.NEXT_PUBLIC_RHWP_STUDIO_URL||"https://edwardkim.github.io/rhwp/"});
         editor.current=instance;
         const draftResponse=await fetch(`/api/collect/${token}/draft?teacherId=${encodeURIComponent(person.id)}&draftKey=${encodeURIComponent(key)}`);
         let documentResponse=draftResponse;
@@ -122,6 +123,22 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
     if(!response.ok)throw new Error((await response.json()).error);
     return {bytes:await response.arrayBuffer(),name:decodeURIComponent(response.headers.get("X-Document-Name")||"작년자료.hwpx")};
   }
+
+  // 화면 크기나 전체화면 전환에 맞춰 편집기 높이를 다시 잡는다.
+  // 편집기는 iframe 을 픽셀 높이로 그리므로 CSS 만으로는 따라오지 않는다.
+  useEffect(()=>{
+    const fit=()=>{
+      const box=container.current;
+      const frame=box?.querySelector("iframe");
+      if(!box||!frame)return;
+      const height=box.clientHeight;
+      if(height>200)frame.style.height=`${height}px`;
+    };
+    fit();
+    const timer=window.setTimeout(fit,60);
+    window.addEventListener("resize",fit);
+    return()=>{window.clearTimeout(timer);window.removeEventListener("resize",fit)};
+  },[fullscreen,sideBySide,ready]);
 
   // Esc 로 전체화면 해제
   useEffect(()=>{

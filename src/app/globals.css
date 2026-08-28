@@ -156,21 +156,26 @@ button,input,textarea,select { font:inherit; } button,a { -webkit-tap-highlight-
 .editor-fullscreen .editor-actions{flex:0 0 auto;padding:10px 16px;border-top:1px solid #d8dee9;background:#f7f9fc;margin:0}
 .editor-fullscreen-bar .error-inline{color:#c62828;font-size:13px}
 
-/* 학사일정 임시창 — 날짜를 고치면서 옆에 두고 본다 */
-.schedule-anchor{position:relative;display:inline-block}
-.schedule-pop{position:absolute;z-index:60;top:calc(100% + 6px);right:0;width:min(380px,92vw);
-  background:#fff;border:1px solid #ccd6e4;border-radius:10px;box-shadow:0 10px 28px rgba(20,40,80,.18);
-  display:flex;flex-direction:column;max-height:min(460px,70vh);overflow:hidden}
+/* 학사일정 임시창 — 화면에 고정되어 스크롤해도 따라다닌다 */
+.schedule-pop{position:fixed;z-index:90;right:24px;top:96px;width:min(400px,calc(100vw - 32px));
+  background:#fff;border:1px solid #ccd6e4;border-radius:10px;box-shadow:0 12px 32px rgba(20,40,80,.22);
+  display:flex;flex-direction:column;max-height:min(560px,calc(100vh - 130px));overflow:hidden}
 .schedule-pop-head{display:flex;align-items:center;justify-content:space-between;gap:8px;
-  padding:10px 12px;border-bottom:1px solid #e5e9f0;background:#f7f9fc}
+  padding:10px 12px;border-bottom:1px solid #e5e9f0;background:#f7f9fc;flex:0 0 auto}
 .schedule-close{border:0;background:none;font-size:20px;line-height:1;cursor:pointer;color:#607080;padding:0 4px}
-.schedule-search{margin:10px 12px 6px;padding:7px 10px;border:1px solid #d8dee9;border-radius:6px;font-size:13px}
-.schedule-list{overflow-y:auto;padding:0 12px 6px;flex:1}
+.schedule-months{display:flex;flex-wrap:wrap;gap:4px;padding:10px 12px 4px;flex:0 0 auto}
+.schedule-months button{border:1px solid #d8dee9;background:#fff;border-radius:999px;
+  padding:4px 10px;font-size:12px;cursor:pointer;color:#40506a}
+.schedule-months button:hover{border-color:var(--navy,#1b3a6b)}
+.schedule-months button.is-on{background:var(--navy,#1b3a6b);border-color:var(--navy,#1b3a6b);color:#fff;font-weight:700}
+.schedule-search{margin:6px 12px;padding:7px 10px;border:1px solid #d8dee9;border-radius:6px;font-size:13px;flex:0 0 auto}
+.schedule-list{overflow-y:auto;padding:0 12px 6px;flex:1;min-height:0}
 .schedule-row{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #f0f3f7;font-size:13px}
 .schedule-row:last-child{border-bottom:0}
 .schedule-date{flex:0 0 108px;font-weight:700;color:#1b3a6b}
 .schedule-date.is-weekend{color:#c62828}
 .schedule-names{flex:1;color:#40506a;min-width:0}
+@media (max-width:800px){.schedule-pop{right:8px;left:8px;width:auto;top:70px}}
 
 /* 사이드바 하위 메뉴 */
 .nav-group{display:contents}

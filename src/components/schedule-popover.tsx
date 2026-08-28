@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect,useRef,useState } from "react";
+import { useEffect,useMemo,useRef,useState } from "react";
 
 type SchoolEvent={date:string;name:string;weekday:string};
 
@@ -16,10 +16,13 @@ function groupByDate(events:SchoolEvent[]){
 }
 
 const label=(date:string)=>`${Number(date.slice(5,7))}월 ${Number(date.slice(8,10))}일`;
+const monthOf=(date:string)=>Number(date.slice(5,7));
+/** 학년도는 3월에 시작해 다음 해 2월에 끝난다. */
+const SCHOOL_MONTHS=[3,4,5,6,7,8,9,10,11,12,1,2];
 
 /**
  * 학사일정을 옆에 띄워 실제 날짜와 요일을 보면서 고치게 한다.
- * 바깥을 클릭하거나 Esc 를 누르면 닫힌다.
+ * 화면에 고정되어 스크롤해도 따라다니고, 바깥을 클릭하거나 Esc 를 누르면 닫힌다.
  */
 export function SchedulePopover({year}:{year:number}){
   const [open,setOpen]=useState(false);
@@ -27,11 +30,17 @@ export function SchedulePopover({year}:{year:number}){
   const [error,setError]=useState("");
   const [busy,setBusy]=useState(false);
   const [query,setQuery]=useState("");
+  const [month,setMonth]=useState<number|null>(null);
   const box=useRef<HTMLDivElement>(null);
+  const button=useRef<HTMLButtonElement>(null);
 
   useEffect(()=>{
     if(!open)return;
-    const onDown=(event:MouseEvent)=>{if(box.current&&!box.current.contains(event.target as Node))setOpen(false)};
+    const onDown=(event:MouseEvent)=>{
+      const target=event.target as Node;
+      if(box.current?.contains(target)||button.current?.contains(target))return;
+      setOpen(false);
+    };
     const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")setOpen(false)};
     document.addEventListener("mousedown",onDown);
     window.addEventListener("keydown",onKey);
@@ -45,6 +54,10 @@ export function SchedulePopover({year}:{year:number}){
       const body=await response.json();
       if(!response.ok)throw new Error(body.error);
       setEvents(body.events);
+      // 오늘이 학년도 안이면 이번 달부터 보여 준다.
+      const now=new Date();
+      const current=now.getFullYear()===year||now.getFullYear()===year+1?now.getMonth()+1:null;
+      setMonth(current&&(body.events as SchoolEvent[]).some(item=>monthOf(item.date)===current)?current:null);
     }catch(cause){setError(cause instanceof Error?cause.message:"학사일정을 불러오지 못했습니다.")}
     finally{setBusy(false)}
   }
@@ -55,12 +68,22 @@ export function SchedulePopover({year}:{year:number}){
     if(next&&!events&&!busy)void load();
   }
 
-  const groups=groupByDate(events??[]).filter(([date,entry])=>
-    !query||entry.names.some(name=>name.includes(query))||label(date).includes(query));
+  const months=useMemo(()=>{
+    const has=new Set((events??[]).map(item=>monthOf(item.date)));
+    return SCHOOL_MONTHS.filter(value=>has.has(value));
+  },[events]);
 
-  return <div className="schedule-anchor" ref={box}>
-    <button type="button" className="btn btn-secondary" onClick={toggle}>{open?"학사일정 닫기":`${year}학년도 학사일정 보기`}</button>
-    {open&&<div className="schedule-pop">
+  const groups=useMemo(()=>groupByDate(events??[]).filter(([date,entry])=>{
+    if(month!==null&&monthOf(date)!==month)return false;
+    if(!query)return true;
+    return entry.names.some(name=>name.includes(query))||label(date).includes(query);
+  }),[events,month,query]);
+
+  return <>
+    <button ref={button} type="button" className="btn btn-secondary" onClick={toggle}>
+      {open?"학사일정 닫기":`${year}학년도 학사일정 보기`}
+    </button>
+    {open&&<div className="schedule-pop" ref={box}>
       <div className="schedule-pop-head">
         <strong>{year}학년도 학사일정</strong>
         <button type="button" className="schedule-close" onClick={()=>setOpen(false)} aria-label="닫기">×</button>
@@ -68,6 +91,10 @@ export function SchedulePopover({year}:{year:number}){
       {busy&&<p className="help" style={{padding:"10px 12px"}}>불러오는 중...</p>}
       {error&&<div className="error" style={{margin:"10px 12px"}}>{error}</div>}
       {events&&!busy&&<>
+        {months.length>0&&<div className="schedule-months">
+          <button type="button" className={month===null?"is-on":""} onClick={()=>setMonth(null)}>전체</button>
+          {months.map(value=><button key={value} type="button" className={month===value?"is-on":""} onClick={()=>setMonth(value)}>{value}월</button>)}
+        </div>}
         <input className="schedule-search" value={query} onChange={event=>setQuery(event.target.value)} placeholder="행사 이름이나 날짜로 찾기"/>
         <div className="schedule-list">
           {groups.length===0
@@ -82,5 +109,5 @@ export function SchedulePopover({year}:{year:number}){
       </>}
       <p className="help" style={{padding:"8px 12px",margin:0,borderTop:"1px solid #e5e9f0"}}>토·일요일은 빨간색입니다. 날짜를 정할 때 참고하세요.</p>
     </div>}
-  </div>;
+  </>;
 }

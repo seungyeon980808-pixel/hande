@@ -11051,7 +11051,7 @@ async function __wbg_init(module_or_path) {
 		if (Object.getPrototypeOf(module_or_path) === Object.prototype) ({module_or_path} = module_or_path);
 		else console.warn("using deprecated parameters for the initialization function; pass a single object instead");
 	}
-	if (module_or_path === void 0) module_or_path = new URL("/Program%20Files/Git/rhwp/assets/rhwp_bg-B2jQnVzD.wasm", "" + import.meta.url);
+	if (module_or_path === void 0) module_or_path = new URL("/rhwp/assets/rhwp_bg-B2jQnVzD.wasm", "" + import.meta.url);
 	const imports = __wbg_get_imports();
 	if (typeof module_or_path === "string" || typeof Request === "function" && module_or_path instanceof Request || typeof URL === "function" && module_or_path instanceof URL) module_or_path = fetch(module_or_path);
 	const { instance, module } = await __wbg_load(await module_or_path, imports);
@@ -65439,7 +65439,7 @@ function installEmbedRuntime(options) {
 //#region \0vite/preload-helper.js
 var scriptRel = "modulepreload";
 var assetsURL = function(dep) {
-	return "/Program%20Files/Git/rhwp/" + dep;
+	return "/rhwp/" + dep;
 };
 var seen = {};
 var __vitePreload = function preload(baseModule, deps, importerUrl) {
@@ -65716,7 +65716,7 @@ async function initialize() {
 		rendererSession = new RendererSession(renderBackendRequest, canvaskitModeRequest, canvaskitSurfaceRequest, renderProfile, async (mode, surface) => {
 			msg.textContent = "CanvasKit 로딩 중...";
 			const { CanvasKitLayerRenderer } = await __vitePreload(async () => {
-				const { CanvasKitLayerRenderer } = await import("./canvaskit-renderer-Buq2Xoxq.js");
+				const { CanvasKitLayerRenderer } = await import("./canvaskit-renderer-o9CyL7lA.js");
 				return { CanvasKitLayerRenderer };
 			}, []);
 			return CanvasKitLayerRenderer.create(mode, surface, { requirePreparedFontFamilies: renderBackendRequest.backend === "auto" });

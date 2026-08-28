@@ -1,4 +1,4 @@
-import { a as localFontFaceKey, c as bytesToHex, i as loadLocalFontBytesFor, l as __commonJSMin, n as CANVASKIT_REPLAY_PLANES, o as resolveLocalFont, r as layerPaintOpReplayPlane, s as blake3, t as DEFAULT_CANVASKIT_SURFACE_REQUEST, u as __toESM } from "./index-BcGoJPia.js";
+import { a as localFontFaceKey, c as bytesToHex, i as loadLocalFontBytesFor, l as __commonJSMin, n as CANVASKIT_REPLAY_PLANES, o as resolveLocalFont, r as layerPaintOpReplayPlane, s as blake3, t as DEFAULT_CANVASKIT_SURFACE_REQUEST, u as __toESM } from "./index-BUkWz5UI.js";
 //#region __vite-browser-external
 var require___vite_browser_external = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = {};
@@ -5662,7 +5662,7 @@ var import_canvaskit = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((
 })))(), 1);
 //#endregion
 //#region src/view/canvaskit-wasm-url.ts
-var canvaskit_wasm_url_default = "/Program%20Files/Git/rhwp/assets/canvaskit-DB1zH3nD.wasm";
+var canvaskit_wasm_url_default = "/rhwp/assets/canvaskit-DB1zH3nD.wasm";
 function boundedCanvasKitSourceImageKey(value) {
 	return value !== void 0 && value.length > 0 && value.length <= 256 && !/[\u0000-\u001f\u007f]/.test(value) ? value : null;
 }

@@ -60,7 +60,7 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
         // 개발 모드의 이중 실행이나 재렌더로 편집기가 두 번 생기는 것을 막는다.
         if(!container.current||editor.current)return;
         container.current.replaceChildren();
-        const instance=await createEditor(container.current,{height:"590px",studioUrl:process.env.NEXT_PUBLIC_RHWP_STUDIO_URL||"https://edwardkim.github.io/rhwp/"});
+        const instance=await createEditor(container.current,{height:"100%",studioUrl:process.env.NEXT_PUBLIC_RHWP_STUDIO_URL||"https://edwardkim.github.io/rhwp/"});
         editor.current=instance;
         const draftResponse=await fetch(`/api/collect/${token}/draft?teacherId=${encodeURIComponent(person.id)}&draftKey=${encodeURIComponent(key)}`);
         let documentResponse=draftResponse;
@@ -134,11 +134,12 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
   return <div className={fullscreen?"editor-fullscreen":undefined}>
     {fullscreen&&<div className="editor-fullscreen-bar">
       <strong>{person.name} · {person.department}</strong>
-      <span className="help">{status}</span>
+      <span className={error||saveError?"error-inline":"help"}>{error||saveError||(done?"제출 완료 · 버전으로 보관됐습니다":status)}</span>
       <div className="action-buttons">
         {hasReference&&<button className="btn btn-secondary" onClick={()=>setSideBySide(v=>!v)}>{sideBySide?"작년 자료 닫기":"작년 자료 열기"}</button>}
         <button className="btn btn-secondary" disabled={!ready||busy||!!error} onClick={()=>{autoSaveEnabled.current=true;void saveDraft(true)}}>임시저장</button>
-        <button className="btn btn-primary" onClick={()=>setFullscreen(false)}>전체화면 끝내기 (Esc)</button>
+        <button className="btn btn-primary" disabled={!ready||busy||!!error} onClick={submit}>{busy?"제출 중...":"제출"}</button>
+        <button className="btn btn-secondary" onClick={()=>setFullscreen(false)}>끝내기 (Esc)</button>
       </div>
     </div>}
     {!fullscreen&&hasReference&&<ReviewPanel mode="before" targetYear={targetYear} loadDocument={referenceBytes}
@@ -156,9 +157,9 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
     </div>}
 
     <div className="card card-pad">
-    {error&&<div className="error" style={{marginBottom:12}}>{error}<br/><span className="help">rHWP가 열리지 않으면 학교망에서 Studio 주소 접근이 가능한지 확인해야 합니다.</span></div>}
-    {saveError&&<div className="error" style={{marginBottom:12}}>{saveError}</div>}
-    {done&&<div className="success" style={{marginBottom:12}}>제출 완료. 제출본은 버전으로 보관됐습니다. 다시 수정한다면 먼저 임시저장 버튼을 눌러 주세요.</div>}
+    {!fullscreen&&error&&<div className="error" style={{marginBottom:12}}>{error}<br/><span className="help">rHWP가 열리지 않으면 학교망에서 Studio 주소 접근이 가능한지 확인해야 합니다.</span></div>}
+    {!fullscreen&&saveError&&<div className="error" style={{marginBottom:12}}>{saveError}</div>}
+    {!fullscreen&&done&&<div className="success" style={{marginBottom:12}}>제출 완료. 제출본은 버전으로 보관됐습니다. 다시 수정한다면 먼저 임시저장 버튼을 눌러 주세요.</div>}
     <div className="side-by-side" data-open={sideBySide&&hasReference?"true":"false"}>
       {sideBySide&&hasReference&&<div className="side-pane">
         <ReferenceViewer token={token} personId={person.id}/>
@@ -168,13 +169,13 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
         <div className="editor-box" ref={container}/>
       </div>
     </div>
-    <div className="editor-actions">
+    {!fullscreen&&<div className="editor-actions">
       <span className="subtle">{status}</span>
       <div className="action-buttons">
         <button className="btn btn-secondary" disabled={!ready||busy||!!error} onClick={()=>{autoSaveEnabled.current=true;void saveDraft(true)}}>임시저장</button>
         <button className="btn btn-primary" disabled={!ready||busy||!!error} onClick={submit}>{busy?"제출 중...":"작성 문서 제출"}</button>
       </div>
-    </div>
+    </div>}
     </div>
   </div>;
 }

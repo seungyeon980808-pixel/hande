@@ -23,7 +23,7 @@ export function ReferenceViewer({token,personId}:{token:string;personId:string})
         const bytes=await response.arrayBuffer();
         const {createEditor}=await import("@rhwp/editor");
         if(!active||!container.current)return;
-        const instance=await createEditor(container.current,{height:"590px",studioUrl:process.env.NEXT_PUBLIC_RHWP_STUDIO_URL||"https://edwardkim.github.io/rhwp/"});
+        const instance=await createEditor(container.current,{height:"100%",studioUrl:process.env.NEXT_PUBLIC_RHWP_STUDIO_URL||"https://edwardkim.github.io/rhwp/"});
         viewer.current=instance;
         await instance.loadFile(bytes,name);
         if(active)setStatus(name);
@@ -35,6 +35,6 @@ export function ReferenceViewer({token,personId}:{token:string;personId:string})
   return <div>
     <div className="side-pane-head">작년 자료 <span className="help">{error?"":status}</span></div>
     {error&&<div className="error" style={{marginBottom:8}}>{error}</div>}
-    <div ref={container}/>
+    <div className="editor-box" ref={container}/>
   </div>;
 }

@@ -1,21 +1,25 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { BlankTarget } from "@/lib/refresh";
 import { FileDrop } from "./file-drop";
+import { putHandoff } from "@/lib/handoff";
 
 const KIND_COLOR:Record<BlankTarget["kind"],string>={날짜:"#fff4d6",연도:"#e3f1ff",이름:"#f0e6ff",숫자:"#eef"};
 
 /** 작년 완성본에서 채워 넣은 값만 지워 빈 양식을 만든다. */
 export function BlankClient(){
+  const router=useRouter();
   const [file,setFile]=useState<File|null>(null);
   const [targets,setTargets]=useState<BlankTarget[]|null>(null);
   const [chosen,setChosen]=useState<Set<string>>(new Set());
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   const [status,setStatus]=useState("");
+  const [made,setMade]=useState<File|null>(null);
 
-  function reset(){setTargets(null);setChosen(new Set());setError("");setStatus("")}
+  function reset(){setTargets(null);setChosen(new Set());setError("");setStatus("");setMade(null)}
 
   async function scan(){
     if(!file){setError("작년 완성본(HWPX)을 선택하세요.");return}
@@ -50,9 +54,19 @@ export function BlankClient(){
       const url=URL.createObjectURL(blob);
       const link=document.createElement("a");link.href=url;link.download=name;link.click();
       URL.revokeObjectURL(url);
-      setStatus(`${picked.length}곳을 비운 빈 양식을 내려받았습니다.`);
+      setMade(new File([blob],name,{type:"application/vnd.hancom.hwpx"}));
+      setStatus(`${picked.length}곳을 비운 빈 양식을 내려받았습니다. 이어서 취합 요청을 만들 수 있습니다.`);
     }catch(cause){setError(cause instanceof Error?cause.message:"만들지 못했습니다.");setStatus("")}
     finally{setBusy(false)}
+  }
+
+  async function handoff(){
+    if(!made)return;
+    setBusy(true);setError("");
+    const ok=await putHandoff(made,file??undefined);
+    setBusy(false);
+    if(!ok){setError("파일이 커서 자동으로 넘기지 못했습니다. 내려받은 파일을 취합 요청 화면에서 직접 올려 주세요.");return}
+    router.push("/requests/new");
   }
 
   function toggle(id:string){setChosen(prev=>{const next=new Set(prev);if(next.has(id))next.delete(id);else next.add(id);return next})}
@@ -99,6 +113,14 @@ export function BlankClient(){
         <button className="btn btn-primary" disabled={busy||!chosen.size} onClick={()=>void make()}>{busy?"처리 중...":"빈 양식 만들어 내려받기"}</button>
       </div>
       <p className="help" style={{marginTop:10}}>내려받은 빈 양식은 취합 요청의 &quot;작성 양식&quot;으로, 원본 완성본은 &quot;작년 자료&quot;로 올리면 됩니다.</p>
+    </div>}
+
+    {made&&<div className="card card-pad" style={{borderColor:"#2e7d32"}}>
+      <strong style={{fontSize:16}}>이어서 취합 요청 만들기</strong>
+      <p className="help" style={{margin:"4px 0 12px"}}>방금 만든 빈 양식과 올려 주신 작년 완성본을 그대로 넣어 둡니다. 파일을 다시 고르지 않아도 됩니다.</p>
+      <div className="action-buttons">
+        <button className="btn btn-primary" disabled={busy} onClick={()=>void handoff()}>이 양식으로 취합 요청 만들기</button>
+      </div>
     </div>}
   </div>;
 }

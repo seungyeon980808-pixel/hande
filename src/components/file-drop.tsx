@@ -1,20 +1,29 @@
 "use client";
 
-import { useId,useRef,useState } from "react";
+import { useEffect,useId,useRef,useState } from "react";
 
 /**
  * 눈에 띄는 파일 선택 영역. 클릭과 드래그앤드롭을 모두 받는다.
  * form 안에서 쓰려면 name 을 넘겨 실제 <input type="file"> 값으로 제출한다.
  */
-export function FileDrop({accept,name,required=false,hint,file,onPick}:{
+export function FileDrop({accept,name,required=false,hint,file,onPick,initial}:{
   accept:string;name?:string;required?:boolean;hint?:string;
-  file?:File|null;onPick?:(file:File|null)=>void;
+  file?:File|null;onPick?:(file:File|null)=>void;initial?:File;
 }){
   const input=useRef<HTMLInputElement>(null);
   const id=useId();
   const [over,setOver]=useState(false);
   const [inner,setInner]=useState<File|null>(null);
   const picked=file!==undefined?file:inner;
+
+  // 다른 화면에서 넘어온 파일을 실제 input 값으로 넣어 폼 제출에 포함되게 한다.
+  useEffect(()=>{
+    if(!initial||!input.current||input.current.files?.length)return;
+    const list=new DataTransfer();
+    list.items.add(initial);
+    input.current.files=list.files;
+    setInner(initial);
+  },[initial]);
 
   function choose(next:File|null){
     if(file===undefined)setInner(next);

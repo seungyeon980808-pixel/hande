@@ -113,7 +113,7 @@ export function detectWarnings(text:string,targetYear:number):Warning[]{
 
   // 3월 15일 / 3. 15. / 3/15 형태
   for(const match of text.matchAll(/(\d{1,2})\s?월\s?(\d{1,2})\s?일/g))record(match[0],Number(match[1]),Number(match[2]));
-  for(const match of text.matchAll(/(?<!\d)(\d{1,2})\s?[./]\s?(\d{1,2})(?!\d)/g))record(match[0],Number(match[1]),Number(match[2]));
+  for(const match of text.matchAll(/(?<![\d.])(\d{1,2})\s?[./]\s?(\d{1,2})(?![\d])/g))record(match[0],Number(match[1]),Number(match[2]));
 
   return warnings.slice(0,30);
 }
@@ -270,7 +270,9 @@ export function detectPrepItems(text:string,targetYear:number):PrepItem[]{
   }
 
   // 날짜는 요일이 달라지므로 비우고 새로 정하게 한다.
-  for(const match of text.matchAll(/\d{1,2}\s?월\s?\d{1,2}\s?일(\s?\([월화수목금토일]\))?(\s?~\s?\d{1,2}\s?일(\s?\([월화수목금토일]\))?)?/g)){
+  // "4월 24일(수)" 뿐 아니라 학교 문서에 흔한 "4. 24.(수)" 형태도 함께 찾는다.
+  const DATE=/\d{1,2}\s?월\s?\d{1,2}\s?일(\s?\([월화수목금토일]\))?(\s?~\s?\d{1,2}\s?일(\s?\([월화수목금토일]\))?)?|(?<![\d.])\d{1,2}\.\s?\d{1,2}\.(\s?\([월화수목금토일]\))?(\s?~\s?\d{1,2}\.\s?\d{1,2}\.(\s?\([월화수목금토일]\))?)?/g;
+  for(const match of text.matchAll(DATE)){
     add({id:`date:${match[0]}`,text:match[0],kind:"날짜",count:countOccurrences(text,match[0]),
       suggested:"",reason:"해가 바뀌면 요일이 달라집니다. 비우고 새 학사일정에 맞춰 적으세요."});
   }

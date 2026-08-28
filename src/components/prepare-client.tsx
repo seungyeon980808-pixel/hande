@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { PrepItem } from "@/lib/refresh";
 import { FileDrop } from "./file-drop";
 import { putHandoff } from "@/lib/handoff";
+import { SchedulePopover } from "./schedule-popover";
 
 type Analysis={items:PrepItem[];targetYear:number};
 
@@ -109,7 +110,10 @@ export function PrepareClient({defaultYear}:{defaultYear:number}){
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
         <div><strong style={{fontSize:16}}>{year}학년도 양식으로 만들기</strong>
           <p className="help" style={{margin:"4px 0 0"}}>체크한 항목만 적용됩니다. 표와 항목 이름은 그대로 남습니다.</p></div>
-        <span className="badge badge-open">{picked.size} / {analysis.items.length} 선택</span>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <span className="badge badge-open">{picked.size} / {analysis.items.length} 선택</span>
+          <SchedulePopover year={Number(year)}/>
+        </div>
       </div>
 
       {GROUPS.map(group=>{

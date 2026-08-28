@@ -13,8 +13,8 @@ const KIND_LABEL={담당자:"담당자 이름",일정:"날짜·기간",연도:"�
  * 문서를 AI와 규칙으로 검토해 확인할 지점을 종류별로 모아 보여 준다.
  * 바꿀 값이 확정된 것만 체크해서 한 번에 반영할 수 있다.
  */
-export function ReviewPanel({label,hint,loadDocument,targetYear,mode,disabled=false,onApply}:{
-  label:string;hint:string;mode:"before"|"final";targetYear:number;disabled?:boolean;
+export function ReviewPanel({label,hint,loadDocument,targetYear,mode,disabled=false,onApply,buttonLabel="AI 검토"}:{
+  label:string;hint:string;mode:"before"|"final";targetYear:number;disabled?:boolean;buttonLabel?:string;
   loadDocument:()=>Promise<{bytes:ArrayBuffer;name:string}|null>;
   onApply?:(pairs:{from:string;to:string}[])=>Promise<void>;
 }){
@@ -70,7 +70,7 @@ export function ReviewPanel({label,hint,loadDocument,targetYear,mode,disabled=fa
       </div>
       <div className="action-buttons">
         {result&&<button className="btn btn-secondary" onClick={()=>setOpen(value=>!value)}>{open?"접기":`결과 보기 (${total})`}</button>}
-        <button className="btn btn-secondary" disabled={busy||disabled} onClick={()=>void run()}>{busy?"검토 중...":disabled?"편집기 준비 중":result?"다시 검토":"AI 검토"}</button>
+        <button className="btn btn-secondary" disabled={busy||disabled} onClick={()=>void run()}>{busy?"확인 중...":disabled?"편집기 준비 중":result?"다시 확인":buttonLabel}</button>
       </div>
     </div>
     {error&&<div className="error" style={{marginTop:10}}>{error}</div>}

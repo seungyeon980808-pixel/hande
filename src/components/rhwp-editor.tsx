@@ -6,6 +6,7 @@ import { useCallback,useEffect,useRef,useState } from "react";
 import type { RhwpEditor as RhwpEditorApi } from "@rhwp/editor";
 import { ReviewPanel } from "./review-panel";
 import { ReferenceViewer } from "./reference-viewer";
+import { SchedulePopover } from "./schedule-popover";
 
 type Person={id:string;name:string;department:string};
 
@@ -136,6 +137,7 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
       <strong>{person.name} · {person.department}</strong>
       <span className={error||saveError?"error-inline":"help"}>{error||saveError||(done?"제출 완료 · 버전으로 보관됐습니다":status)}</span>
       <div className="action-buttons">
+        <SchedulePopover year={targetYear}/>
         {hasReference&&<button className="btn btn-secondary" onClick={()=>setSideBySide(v=>!v)}>{sideBySide?"작년 자료 닫기":"작년 자료 열기"}</button>}
         <button className="btn btn-secondary" disabled={!ready||busy||!!error} onClick={()=>{autoSaveEnabled.current=true;void saveDraft(true)}}>임시저장</button>
         <button className="btn btn-primary" disabled={!ready||busy||!!error} onClick={submit}>{busy?"제출 중...":"제출"}</button>
@@ -143,14 +145,13 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
       </div>
     </div>}
     {!fullscreen&&hasReference&&<ReviewPanel mode="before" targetYear={targetYear} loadDocument={referenceBytes}
-      label="작성 전 검토 · 작년 문서에서 바꿀 곳" hint="작년 자료를 AI가 미리 읽고, 올해 바꿔야 할 곳을 알려 줍니다."/>}
-    {!fullscreen&&<ReviewPanel mode="final" targetYear={targetYear} loadDocument={currentBytes} disabled={!ready} onApply={applyToDocument}
-      label="제출 전 검토 · 작성한 내용 확인" hint="작년 내용이 남았거나 빈칸이 있는지 AI가 확인합니다."/>}
-
+      label="작성 전 미리보기 · 작년 문서에서 바꿀 곳" hint="작년 자료를 AI가 미리 읽고, 올해 바꿔야 할 곳을 알려 줍니다."
+      buttonLabel="바꿀 곳 미리보기"/>}
     {!fullscreen&&<div className="card card-pad" style={{marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
       <div><strong style={{fontSize:15}}>{hasReference?"작년 자료 나란히 보기":"넓게 보기"}</strong>
         <p className="help" style={{margin:"4px 0 0"}}>{hasReference?"왼쪽 작년 문서에서 글이나 표를 복사해 오른쪽에 붙여넣을 수 있습니다.":"화면을 꽉 채워 편집합니다. Esc 키로 빠져나옵니다."}</p></div>
       <div className="action-buttons">
+        <SchedulePopover year={targetYear}/>
         {hasReference&&<button className="btn btn-secondary" onClick={()=>setSideBySide(v=>!v)}>{sideBySide?"작년 자료 닫기":"작년 자료 열기"}</button>}
         <button className="btn btn-primary" onClick={()=>setFullscreen(true)}>전체화면으로 편집</button>
       </div>
@@ -177,5 +178,9 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
       </div>
     </div>}
     </div>
+
+    {!fullscreen&&<ReviewPanel mode="final" targetYear={targetYear} loadDocument={currentBytes} disabled={!ready} onApply={applyToDocument}
+      label="제출 전 최종 점검" hint="다 쓰신 뒤 눌러 주세요. 작년 내용이 남았거나 빈칸이 있는지 확인합니다."
+      buttonLabel="제출 전 점검하기"/>}
   </div>;
 }

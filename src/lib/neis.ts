@@ -34,3 +34,38 @@ function requestJson(url:string):Promise<unknown>{
     request.on("error",reject);
   });
 }
+
+const scheduleEndpoint="https://open.neis.go.kr/hub/SchoolSchedule";
+
+export type SchoolEvent={date:string;name:string;weekday:string};
+
+const WEEKDAY=["일","월","화","수","목","금","토"];
+
+/**
+ * 나이스에서 학사일정을 가져온다.
+ * 날짜를 정할 때 실제 요일과 학교 행사를 함께 보기 위한 것이다.
+ */
+export async function getSchoolSchedule({from,to}:{from:string;to:string}):Promise<SchoolEvent[]>{
+  const key=process.env.NEIS_API_KEY?.trim(),educationOfficeCode=process.env.NEIS_ATPT_OFCDC_SC_CODE?.trim(),schoolCode=process.env.NEIS_SD_SCHUL_CODE?.trim();
+  if(!key||!educationOfficeCode||!schoolCode)throw new NeisConfigurationError();
+  const params=new URLSearchParams({
+    KEY:key,Type:"json",pIndex:"1",pSize:"500",
+    ATPT_OFCDC_SC_CODE:educationOfficeCode,SD_SCHUL_CODE:schoolCode,
+    AA_FROM_YMD:from.replaceAll("-",""),AA_TO_YMD:to.replaceAll("-",""),
+  });
+  const body=await requestJson(`${scheduleEndpoint}?${params}`) as Record<string,unknown>;
+  // 일정이 하나도 없으면 RESULT 로만 응답한다. 오류가 아니므로 빈 배열을 돌려준다.
+  if(!Array.isArray(body?.SchoolSchedule))return [];
+  const rows=(body.SchoolSchedule as Record<string,unknown>[])[1]?.row;
+  if(!Array.isArray(rows))return [];
+  const events:SchoolEvent[]=[];
+  for(const row of rows as Record<string,string>[]){
+    const raw=String(row.AA_YMD||"");
+    const name=String(row.EVENT_NM||"").trim();
+    if(!/^\d{8}$/.test(raw)||!name)continue;
+    const date=`${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`;
+    const day=new Date(Number(raw.slice(0,4)),Number(raw.slice(4,6))-1,Number(raw.slice(6,8)));
+    events.push({date,name,weekday:WEEKDAY[day.getDay()]});
+  }
+  return events;
+}

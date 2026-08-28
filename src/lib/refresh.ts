@@ -210,3 +210,80 @@ export function blankOut(source:Uint8Array,targets:{text:string}[]):Uint8Array{
   }
   return zipSync(files,{level:6});
 }
+
+/** 올해 양식을 만들 때 다룰 항목 한 건. */
+export type PrepItem={
+  id:string;
+  /** 문서에 실제로 들어 있는 글자 */
+  text:string;
+  kind:"연도"|"회차"|"날짜"|"이름";
+  count:number;
+  /** 연도·회차처럼 바꿀 값이 정해진 경우의 후보들 (드롭다운) */
+  options?:string[];
+  /** 처음 고를 값. 날짜·이름은 빈 문자열(비움)이다. */
+  suggested:string;
+  /** 왜 이렇게 제안하는지 */
+  reason:string;
+};
+
+/**
+ * 작년 완성본 하나로 올해 양식을 만들기 위한 항목을 모두 찾는다.
+ * 연도·회차는 바꿀 값을 고르게 하고, 날짜·이름은 비우기를 기본으로 한다.
+ */
+export function detectPrepItems(text:string,targetYear:number):PrepItem[]{
+  const items:PrepItem[]=[];
+  const seen=new Set<string>();
+  const add=(item:PrepItem)=>{if(seen.has(item.text))return;seen.add(item.text);items.push(item)};
+
+  // 문서에 실제로 있는 연도 중 가장 큰 값을 작년으로 본다.
+  const years=[...text.matchAll(/(?<!\d)(20\d{2})(?!\d)/g)].map(match=>Number(match[1]));
+  const source=years.length?Math.max(...years):targetYear-1;
+  const shift=targetYear-source;
+
+  for(const suffix of ["학년도","년도","년","."]){
+    const from=`${source}${suffix}`;
+    if(!text.includes(from))continue;
+    add({id:`year:${from}`,text:from,kind:"연도",count:countOccurrences(text,from),
+      options:[`${targetYear}${suffix}`,`${targetYear+1}${suffix}`,`${source}${suffix}`],
+      suggested:`${targetYear}${suffix}`,
+      reason:`${source}년 문서입니다. ${targetYear}년으로 바꿉니다.`});
+  }
+  if(text.includes(String(source))&&!items.some(item=>item.text.startsWith(String(source)))){
+    add({id:`year:${source}`,text:String(source),kind:"연도",count:countOccurrences(text,String(source)),
+      options:[String(targetYear),String(targetYear+1),String(source)],
+      suggested:String(targetYear),
+      reason:`${source}년 문서입니다. ${targetYear}년으로 바꿉니다.`});
+  }
+
+  // 회차·기수는 해가 넘어간 만큼 올린다.
+  for(const [pattern,unit] of [[/제\s?(\d{1,3})\s?회/g,"회"],[/제\s?(\d{1,3})\s?기/g,"기"]] as const){
+    for(const match of text.matchAll(pattern)){
+      const current=Number(match[1]);
+      if(!Number.isInteger(current)||current<1||current>999)continue;
+      const next=current+Math.max(shift,1);
+      const make=(value:number)=>match[0].replace(String(current),String(value));
+      add({id:`count:${match[0]}`,text:match[0],kind:"회차",count:countOccurrences(text,match[0]),
+        options:[make(next),make(current+1),match[0]],
+        suggested:make(next),
+        reason:`해마다 올라가는 ${unit}차입니다. ${next}${unit}로 올립니다.`});
+    }
+  }
+
+  // 날짜는 요일이 달라지므로 비우고 새로 정하게 한다.
+  for(const match of text.matchAll(/\d{1,2}\s?월\s?\d{1,2}\s?일(\s?\([월화수목금토일]\))?(\s?~\s?\d{1,2}\s?일(\s?\([월화수목금토일]\))?)?/g)){
+    add({id:`date:${match[0]}`,text:match[0],kind:"날짜",count:countOccurrences(text,match[0]),
+      suggested:"",reason:"해가 바뀌면 요일이 달라집니다. 비우고 새 학사일정에 맞춰 적으세요."});
+  }
+
+  // 담당자 이름
+  const NOT_NAME=new Set(["담당교과","성적관리","학년부장","교육과정","생활지도"]);
+  const SURNAME="김이박최정강조윤장임한오서신권황안송류전홍고문양손배백허유남심노하곽성차주우구민진지엄채원천방공";
+  for(const match of text.matchAll(/[가-힣]{3}(?=\s{0,2}(선생님|교사|부장|위원|주무관|장학사))/g)){
+    const name=match[0];
+    if(NOT_NAME.has(name)||!SURNAME.includes(name[0]))continue;
+    add({id:`name:${name}`,text:name,kind:"이름",count:countOccurrences(text,name),
+      suggested:"",reason:"담당자가 바뀌었다면 비우고, 그대로라면 체크를 해제하세요."});
+  }
+
+  return items;
+}

@@ -19,12 +19,11 @@ const isOpen=(item:NavItem,active:string)=>item.label===active||Boolean(item.chi
 
 export function AppFrame({children,active="업무 취합"}:{children:React.ReactNode;active?:string}){
   return <div className="app-shell">
-    <header className="topbar">
-      <div className="brand">학교업무 한곳 <small>교직원 업무지원</small></div>
-      <div style={{fontSize:13}}>내부망 시연용</div>
-    </header>
     <div className="layout">
       <aside className="sidebar">
+        <Link href="#" className="brand" style={{display:"block",textDecoration:"none"}}>
+          수합의 정석 <small>한글·엑셀 파일 자동 취합</small>
+        </Link>
         <div className="nav-label">업무 메뉴</div>
         {nav.map(item=><div key={item.label} className="nav-group">
           <Link className={`nav-item ${item.label===active?"active":""}`} href={item.href}>{item.label}</Link>

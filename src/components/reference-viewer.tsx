@@ -2,6 +2,7 @@
 
 import { useEffect,useRef,useState } from "react";
 import type { RhwpEditor as RhwpEditorApi } from "@rhwp/editor";
+import { getRhwpStudioUrl } from "@/lib/rhwp-studio-url";
 
 /**
  * 작년 자료를 읽기용으로 띄운다.
@@ -23,7 +24,7 @@ export function ReferenceViewer({token,personId}:{token:string;personId:string})
         const bytes=await response.arrayBuffer();
         const {createEditor}=await import("@rhwp/editor");
         if(!active||!container.current)return;
-        const instance=await createEditor(container.current,{height:"100%",studioUrl:process.env.NEXT_PUBLIC_RHWP_STUDIO_URL||"https://edwardkim.github.io/rhwp/"});
+        const instance=await createEditor(container.current,{height:"100%",studioUrl:getRhwpStudioUrl()});
         viewer.current=instance;
         await instance.loadFile(bytes,name);
         if(active)setStatus(name);

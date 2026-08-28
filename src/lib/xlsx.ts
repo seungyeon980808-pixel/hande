@@ -7,6 +7,8 @@ function styleHeader(row:ExcelJS.Row){
   row.alignment={vertical:"middle",horizontal:"center"};
 }
 
+const DATE_NUMBER_FORMAT='yyyy"년" m"월" d"일" hh:mm';
+
 function cellValue(column:TableColumn,row:TableRow):string|number{
   const value=row[column.id]??"";
   if(column.type==="number"&&value!==""&&Number.isFinite(Number(value)))return Number(value);
@@ -25,7 +27,10 @@ export async function createTableWorkbook(collection:Collection):Promise<Buffer>
   for(const recipient of collection.recipients){
     const latest=[...recipient.versions].reverse().find(version=>version.kind==="table");
     if(!latest?.rows)continue;
-    for(const row of latest.rows)result.addRow([recipient.name,recipient.department,new Date(latest.createdAt).toLocaleString("ko-KR"),...collection.table.columns.map(column=>cellValue(column,row))]);
+    for(const row of latest.rows){
+      const output=result.addRow([recipient.name,recipient.department,new Date(latest.createdAt),...collection.table.columns.map(column=>cellValue(column,row))]);
+      output.getCell(3).numFmt=DATE_NUMBER_FORMAT;
+    }
   }
   result.columns.forEach((column,index)=>{column.width=index<3?18:Math.max(12,Math.min(35,(collection.table?.columns[index-3]?.label.length??8)+8))});
   result.autoFilter={from:"A1",to:{row:1,column:base.length+collection.table.columns.length}};
@@ -37,9 +42,11 @@ export async function createTableWorkbook(collection:Collection):Promise<Buffer>
     const latest=recipient.versions.at(-1),draft=recipient.drafts.at(-1);
     const state=draft&&latest?"수정 중":draft?"작성 중":latest?"제출 완료":"미작성";
     const activity=draft?.updatedAt??latest?.createdAt??"";
-    status.addRow([recipient.name,recipient.department,state,recipient.versions.length,activity?new Date(activity).toLocaleString("ko-KR"):""]);
+    const output=status.addRow([recipient.name,recipient.department,state,recipient.versions.length,activity?new Date(activity):""]);
+    if(activity)output.getCell(5).numFmt=DATE_NUMBER_FORMAT;
   }
   status.columns=[{width:14},{width:18},{width:14},{width:12},{width:24}];
+  status.autoFilter={from:"A1",to:"E1"};
   const bytes=await workbook.xlsx.writeBuffer();
   return Buffer.from(bytes);
 }

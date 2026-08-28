@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { assertCollectionOpen,CollectionClosedError,collectionClosed,collectionType } from "@/lib/domain";
+import { assertCollectionOpen,CollectionClosedError,collectionClosed,collectionMode,collectionType } from "@/lib/domain";
 import { deleteStored,storeFile,storeSpreadsheet } from "@/lib/files";
 import { findByShareHash,mutateCollection } from "@/lib/repository";
 import { safeFileName,tokenHash } from "@/lib/security";
@@ -9,6 +9,7 @@ export async function POST(request:Request,{params}:{params:Promise<{token:strin
     const {token}=await params;
     const item=await findByShareHash(tokenHash(token));
     if(!item)return Response.json({error:"유효하지 않은 제출 링크입니다."},{status:404});
+    if(collectionMode(item)==="shared_fields")return Response.json({error:"지정 필드 공동작성은 필드 제출 주소를 사용하세요."},{status:400});
     if(collectionClosed(item))return Response.json({error:"제출 마감 시간이 지났습니다. 담당자에게 문의하세요."},{status:409});
     const form=await request.formData();
     const teacherId=String(form.get("teacherId")||"");

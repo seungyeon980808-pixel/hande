@@ -4,6 +4,7 @@ import { formatDateTime,formatTime } from "@/lib/datetime";
 
 import { useCallback,useEffect,useRef,useState } from "react";
 import type { RhwpEditor as RhwpEditorApi } from "@rhwp/editor";
+import { getRhwpStudioUrl } from "@/lib/rhwp-studio-url";
 import { ReviewPanel } from "./review-panel";
 import { ReferenceViewer } from "./reference-viewer";
 import { SchedulePopover } from "./schedule-popover";
@@ -63,7 +64,7 @@ export function RhwpEditor({token,person,hasReference=false,targetYear}:{token:s
         // 개발 모드의 이중 실행이나 재렌더로 편집기가 두 번 생기는 것을 막는다.
         if(!container.current||editor.current)return;
         container.current.replaceChildren();
-        const instance=await createEditor(container.current,{height:"100%",studioUrl:process.env.NEXT_PUBLIC_RHWP_STUDIO_URL||"https://edwardkim.github.io/rhwp/"});
+        const instance=await createEditor(container.current,{height:"100%",studioUrl:getRhwpStudioUrl()});
         editor.current=instance;
         const draftResponse=await fetch(`/api/collect/${token}/draft?teacherId=${encodeURIComponent(person.id)}&draftKey=${encodeURIComponent(key)}`);
         let documentResponse=draftResponse;

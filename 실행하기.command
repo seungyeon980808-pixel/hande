@@ -24,11 +24,25 @@ if [ ! -d "node_modules" ]; then
   npm install
 fi
 
+if [ ! -d "vendor/rhwp-studio/node_modules" ]; then
+  echo "한글 편집기를 준비하고 있습니다. 잠시 기다려 주세요..."
+  npm --prefix vendor/rhwp-studio install
+fi
+
+LAN_IP="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true)"
 echo ""
-echo "프로그램 주소: http://localhost:3000"
+echo "이 컴퓨터: http://localhost:3000"
+if [ -n "$LAN_IP" ]; then
+  echo "같은 네트워크: http://$LAN_IP:3000"
+fi
 echo "이 창을 닫으면 프로그램도 종료됩니다."
 echo "종료하려면 Control + C를 누르세요."
 echo ""
 
+npm --prefix vendor/rhwp-studio run dev -- --host 0.0.0.0 &
+STUDIO_PID=$!
+cleanup() { kill "$STUDIO_PID" 2>/dev/null || true; }
+trap cleanup EXIT INT TERM
+
 (sleep 2 && open "http://localhost:3000") &
-npm run dev
+npm run dev -- --hostname 0.0.0.0

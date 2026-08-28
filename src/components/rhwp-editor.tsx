@@ -2,6 +2,7 @@
 
 import { useCallback,useEffect,useRef,useState } from "react";
 import type { RhwpEditor as RhwpEditorApi } from "@rhwp/editor";
+import { getRhwpStudioUrl } from "@/lib/rhwp-studio-url";
 
 type Person={id:string;name:string;department:string};
 
@@ -43,7 +44,10 @@ export function RhwpEditor({token,person}:{token:string;person:Person}){
   useEffect(()=>{
     let active=true;
     let interval:number|undefined;
+    let instance:RhwpEditorApi|null=null;
+    const host=container.current;
     autoSaveEnabled.current=true;
+    if(!host)return;
     (async()=>{
       try{
         const storageKey=`school-work-draft:${token}:${person.id}`;
@@ -51,8 +55,10 @@ export function RhwpEditor({token,person}:{token:string;person:Person}){
         if(!key){key=crypto.randomUUID();localStorage.setItem(storageKey,key)}
         draftKey.current=key;
         const {createEditor}=await import("@rhwp/editor");
-        if(!container.current)return;
-        const instance=await createEditor(container.current,{height:"590px",studioUrl:process.env.NEXT_PUBLIC_RHWP_STUDIO_URL||"https://edwardkim.github.io/rhwp/"});
+        if(!active)return;
+        host.replaceChildren();
+        instance=await createEditor(host,{height:"590px",studioUrl:getRhwpStudioUrl()});
+        if(!active){instance.destroy();instance=null;return}
         editor.current=instance;
         const draftResponse=await fetch(`/api/collect/${token}/draft?teacherId=${encodeURIComponent(person.id)}&draftKey=${encodeURIComponent(key)}`);
         let documentResponse=draftResponse;
@@ -61,14 +67,19 @@ export function RhwpEditor({token,person}:{token:string;person:Person}){
         if(!documentResponse.ok)throw new Error((await documentResponse.json()).error);
         const name=documentResponse.headers.get("X-Document-Name")||"template.hwpx";
         await instance.loadFile(await documentResponse.arrayBuffer(),decodeURIComponent(name));
-        if(active){
-          setReady(true);
-          if(restored){const updated=draftResponse.headers.get("X-Draft-Updated-At");setStatus(`임시저장 문서를 복구했습니다${updated?` · ${new Date(updated).toLocaleString("ko-KR")}`:""}`)}else{setStatus("작성 중인 문서는 1분마다 이 기기에 임시저장됩니다.")}
-          interval=window.setInterval(()=>{if(autoSaveEnabled.current)void saveDraft(false)},60_000);
-        }
+        if(!active)return;
+        setReady(true);
+        if(restored){const updated=draftResponse.headers.get("X-Draft-Updated-At");setStatus(`임시저장 문서를 복구했습니다${updated?` · ${new Date(updated).toLocaleString("ko-KR")}`:""}`)}else{setStatus("작성 중인 문서는 1분마다 이 기기에 임시저장됩니다.")}
+        interval=window.setInterval(()=>{if(autoSaveEnabled.current)void saveDraft(false)},60_000);
       }catch(cause){if(active)setError(cause instanceof Error?cause.message:"편집기를 열지 못했습니다.")}
     })();
-    return()=>{active=false;if(interval)window.clearInterval(interval);editor.current?.destroy();editor.current=null};
+    return()=>{
+      active=false;
+      if(interval)window.clearInterval(interval);
+      instance?.destroy();
+      if(editor.current===instance)editor.current=null;
+      host.replaceChildren();
+    };
   },[person.id,saveDraft,token]);
 
   async function submit(){

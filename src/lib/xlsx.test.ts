@@ -10,6 +10,13 @@ describe("표 취합 엑셀",()=>{
     const bytes=await createTableWorkbook(item);
     await workbook.xlsx.load(bytes as unknown as Parameters<typeof workbook.xlsx.load>[0]);
     expect(workbook.worksheets.map(sheet=>sheet.name)).toEqual(["전체 취합 결과","제출 현황"]);
-    expect(workbook.getWorksheet("전체 취합 결과")?.rowCount).toBe(3);
+    const result=workbook.getWorksheet("전체 취합 결과");
+    const status=workbook.getWorksheet("제출 현황");
+    expect(result?.rowCount).toBe(3);
+    expect(result?.getCell("C2").value).toBeInstanceOf(Date);
+    expect(result?.getCell("C2").numFmt).toContain("yyyy");
+    expect(status?.getCell("E2").value).toBeInstanceOf(Date);
+    expect(status?.getCell("E2").numFmt).toContain("yyyy");
+    expect(status?.autoFilter).toBeTruthy();
   });
 });

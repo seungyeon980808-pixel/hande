@@ -1,5 +1,12 @@
 export type Teacher = { id:string; name:string; department:string };
 export type CollectionType = "document"|"table"|"xlsx";
+export type CollectionMode = "individual"|"shared_fields";
+export type SharedFieldInitialContentMode = "template"|"blank";
+export type SharedFieldStatus = "unstarted"|"drafting"|"shared"|"submitted";
+export type SharedFieldDefinition = { id:string; sourceName:string; label:string; assigneeId:string; required:boolean; order:number; initialContentMode:SharedFieldInitialContentMode; initialValue:string };
+export type SharedFieldVersion = { id:string; version:number; status:"shared"|"submitted"; value:string; createdAt:string };
+export type SharedFieldDraft = { deviceKeyHash:string; value:string; updatedAt:string };
+export type SharedFieldState = { fieldId:string; status:SharedFieldStatus; drafts:SharedFieldDraft[]; versions:SharedFieldVersion[] };
 export type TableColumnType = "text"|"number"|"date"|"select";
 export type TableColumn = { id:string; label:string; type:TableColumnType; required:boolean; options:string[] };
 export type TableRow = Record<string,string>;
@@ -7,9 +14,10 @@ export type TableDefinition = { columns:TableColumn[]; initialRows:TableRow[] };
 export type SubmissionVersion = { id:string; version:number; kind?:"file"|"table"; storageKey:string; displayName:string; size:number; createdAt:string; rows?:TableRow[] };
 export type Draft = { id:string; deviceKeyHash:string; kind?:"file"|"table"; storageKey:string; displayName:string; size:number; updatedAt:string; rows?:TableRow[] };
 export type Recipient = Teacher & { versions:SubmissionVersion[]; drafts:Draft[] };
-export type Collection = { id:string; type?:CollectionType; title:string; description:string; deadline:string; shareTokenHash:string; manageTokenHash:string; templateStorageKey:string; templateName:string; templateSize:number; table?:TableDefinition; createdAt:string; recipients:Recipient[] };
+export type Collection = { id:string; type?:CollectionType; mode?:CollectionMode; title:string; description:string; deadline:string; shareTokenHash:string; manageTokenHash:string; templateStorageKey:string; templateName:string; templateSize:number; table?:TableDefinition; sharedFields?:SharedFieldDefinition[]; sharedFieldStates?:SharedFieldState[]; createdAt:string; recipients:Recipient[] };
 export type AppState = { collections:Collection[] };
 export function collectionType(collection:Pick<Collection,"type">):CollectionType{return collection.type??"document"}
+export function collectionMode(collection:Pick<Collection,"mode">):CollectionMode{return collection.mode??"individual"}
 export function collectionClosed(collection:Pick<Collection,"deadline">,now=Date.now()){return new Date(collection.deadline).getTime()<=now}
 export class CollectionClosedError extends Error{constructor(){super("제출 마감 시간이 지났습니다. 담당자에게 문의하세요.");this.name="CollectionClosedError"}}
 export function assertCollectionOpen(collection:Pick<Collection,"deadline">,now=Date.now()){if(collectionClosed(collection,now))throw new CollectionClosedError()}

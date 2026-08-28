@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { BlankTarget } from "@/lib/refresh";
+import { FileDrop } from "./file-drop";
 
 const KIND_COLOR:Record<BlankTarget["kind"],string>={날짜:"#fff4d6",연도:"#e3f1ff",이름:"#f0e6ff",숫자:"#eef"};
 
@@ -62,8 +63,7 @@ export function BlankClient(){
       <div className="xlsx-step"><span>1</span><div>
         <strong>작년 완성본 올리기</strong>
         <p>작년에 작성을 마친 한글 파일(HWPX)을 선택하세요. 원본은 바뀌지 않습니다.</p>
-        <input type="file" accept=".hwpx" onChange={event=>{setFile(event.target.files?.[0]??null);reset()}}/>
-        {file&&<p className="help">선택: {file.name}</p>}
+        <FileDrop accept=".hwpx" hint="HWPX" file={file} onPick={next=>{setFile(next);reset()}}/>
       </div></div>
       <div className="xlsx-step"><span>2</span><div>
         <strong>지울 값 찾기</strong>

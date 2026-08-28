@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { CollectionType,Teacher } from "@/lib/domain";
 import { TableSchemaBuilder } from "./table-schema-builder";
+import { FileDrop } from "./file-drop";
 
 type Created={shareUrl:string;manageUrl:string};
 
@@ -17,8 +18,8 @@ export function RequestForm({teachers}:{teachers:Teacher[]}){
     <div className="field full"><label htmlFor="description">안내 내용</label><textarea id="description" name="description" rows={3} maxLength={500} placeholder="작성 범위나 유의사항을 간단히 적어주세요."/></div>
     <div className="field"><label htmlFor="targetYear">기준 학년도</label><input id="targetYear" name="targetYear" required type="number" min={2000} max={2099} defaultValue={new Date().getFullYear()+1}/><span className="help">몇 학년도용 문서인지 정합니다. AI 검토가 이 값을 기준으로 바꿀 곳을 찾습니다.</span></div>
     <div className="field"><label htmlFor="deadline">제출 마감</label><input id="deadline" name="deadline" required type="datetime-local"/></div>
-    {type!=="table"&&<div className="field"><label htmlFor="template">{type==="document"?"작성 양식":"엑셀 양식"}</label><input key={type} id="template" name="template" required type="file" accept={type==="document"?".hwp,.hwpx":".xlsx"}/><span className="help">{type==="document"?'HWP/HWPX, 최대 20MB · HWPX에서 {{교사명}}, {{부서명}} 자동 치환':"XLSX, 최대 20MB · 내려받아 Excel에서 작성 후 제출"}</span></div>}
-    {type==="document"&&<div className="field"><label htmlFor="reference">작년 자료 (선택)</label><input id="reference" name="reference" type="file" accept=".hwp,.hwpx"/><span className="help">함께 올리면 제출 화면에서 작년 문서를 왼쪽에 나란히 띄워 복사·붙여넣기 할 수 있습니다.</span></div>}
+    {type!=="table"&&<div className="field"><label>{type==="document"?"작성 양식":"엑셀 양식"}</label><FileDrop key={type} name="template" required accept={type==="document"?".hwp,.hwpx":".xlsx"} hint={type==="document"?"HWP · HWPX":"XLSX"}/><span className="help">{type==="document"?'HWP/HWPX, 최대 20MB · HWPX에서 {{교사명}}, {{부서명}} 자동 치환':"XLSX, 최대 20MB · 내려받아 Excel에서 작성 후 제출"}</span></div>}
+    {type==="document"&&<div className="field"><label>작년 자료 (선택)</label><FileDrop name="reference" accept=".hwp,.hwpx" hint="작년 완성본"/><span className="help">함께 올리면 제출 화면에서 작년 문서를 왼쪽에 나란히 띄워 복사·붙여넣기 할 수 있습니다.</span></div>}
     {type==="table"&&<TableSchemaBuilder/>}
     <div className="field full"><label>제출 대상</label><div className="teacher-grid">{teachers.map(teacher=><label className="teacher-check" key={teacher.id}><input type="checkbox" name="recipientIds" value={teacher.id}/><span><strong>{teacher.name}</strong><br/><span className="help">{teacher.department}</span></span></label>)}</div></div>
     {error&&<div className="error field full">{error}</div>}

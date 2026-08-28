@@ -3,6 +3,7 @@
 import { formatDateTime } from "@/lib/datetime";
 
 import { useCallback,useEffect,useRef,useState } from "react";
+import { FileDrop } from "./file-drop";
 
 type Person={id:string;name:string;department:string};
 type Kind="xlsx"|"document";
@@ -26,7 +27,7 @@ export function FileSubmission({token,person,templateName,kind}:{token:string;pe
   }
   return <div className="card card-pad xlsx-panel">
     <div className="xlsx-step"><span>1</span><div><strong>양식 내려받기</strong><p>담당자가 올린 원본 양식을 {preset.app}에서 작성하세요.</p><a className="btn btn-secondary" href={`/api/collect/${token}/template?teacherId=${encodeURIComponent(person.id)}`}>{templateName} 다운로드</a></div></div>
-    <div className="xlsx-step"><span>2</span><div><strong>작성 파일 선택</strong><p>작성한 {preset.label} 파일을 선택하세요. 최대 20MB까지 가능합니다.</p><input type="file" accept={preset.accept} onChange={event=>setFile(event.target.files?.[0]??null)}/>{file&&<p className="help">선택: {file.name}</p>}</div></div>
+    <div className="xlsx-step"><span>2</span><div><strong>작성 파일 선택</strong><p>작성한 {preset.label} 파일을 선택하세요. 최대 20MB까지 가능합니다.</p><FileDrop accept={preset.accept} hint={preset.label} file={file} onPick={setFile}/></div></div>
     <div className="xlsx-step"><span>3</span><div><strong>임시 또는 최종 제출</strong><p>작성 중이면 임시 업로드, 완료했으면 최종 제출을 누르세요.</p><div className="action-buttons"><button className="btn btn-secondary" disabled={busy} onClick={()=>void upload("draft")}>임시 업로드</button><button className="btn btn-primary" disabled={busy} onClick={()=>void upload("submit")}>{busy?"처리 중...":"최종 제출"}</button></div></div></div>
     {draftUrl&&<div className="notice"><strong>서버 임시 파일</strong> · <a href={draftUrl} download={draftName} style={{color:"var(--navy)",fontWeight:700}}>이어 작성할 파일 다운로드</a></div>}
     <p className="subtle">{status}</p>

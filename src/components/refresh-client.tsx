@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Suggestion,Warning } from "@/lib/refresh";
+import { FileDrop } from "./file-drop";
 
 type Analysis={suggestions:Suggestion[];warnings:Warning[];targetYear:number;aiEnabled:boolean;aiError?:string;textLength:number};
 
@@ -65,8 +66,7 @@ export function RefreshClient({defaultYear}:{defaultYear:number}){
       <div className="xlsx-step"><span>1</span><div>
         <strong>작년 양식 올리기</strong>
         <p>작년에 쓰던 한글 파일(HWPX)을 선택하세요. 원본은 바뀌지 않습니다.</p>
-        <input type="file" accept=".hwpx" onChange={event=>{setFile(event.target.files?.[0]??null);reset()}}/>
-        {file&&<p className="help">선택: {file.name}</p>}
+        <FileDrop accept=".hwpx" hint="HWPX" file={file} onPick={next=>{setFile(next);reset()}}/>
       </div></div>
       <div className="xlsx-step"><span>2</span><div>
         <strong>기준 학년도</strong>

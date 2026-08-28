@@ -11,3 +11,4 @@ export async function findByShareHash(hash:string){return (await readState()).co
 export async function findManaged(id:string,hash:string){return (await readState()).collections.find(i=>i.id===id&&i.manageTokenHash===hash)}
 export async function saveCollection(collection:Collection){await runSerial(async()=>{const state=await readState();state.collections.unshift(collection);await writeState(state)})}
 export async function mutateCollection(id:string,update:(item:Collection)=>void){await runSerial(async()=>{const state=await readState();const item=state.collections.find(v=>v.id===id);if(!item)throw new Error("요청을 찾을 수 없습니다.");update(item);await writeState(state)})}
+export async function deleteCollection(id:string){await runSerial(async()=>{const state=await readState();const index=state.collections.findIndex(v=>v.id===id);if(index<0)throw new Error("요청을 찾을 수 없습니다.");state.collections.splice(index,1);await writeState(state)})}

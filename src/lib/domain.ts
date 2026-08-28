@@ -14,7 +14,7 @@ export type TableDefinition = { columns:TableColumn[]; initialRows:TableRow[] };
 export type SubmissionVersion = { id:string; version:number; kind?:"file"|"table"; storageKey:string; displayName:string; size:number; createdAt:string; rows?:TableRow[] };
 export type Draft = { id:string; deviceKeyHash:string; kind?:"file"|"table"; storageKey:string; displayName:string; size:number; updatedAt:string; rows?:TableRow[] };
 export type Recipient = Teacher & { versions:SubmissionVersion[]; drafts:Draft[] };
-export type Collection = { id:string; type?:CollectionType; mode?:CollectionMode; title:string; description:string; deadline:string; shareTokenHash:string; manageTokenHash:string; templateStorageKey:string; templateName:string; templateSize:number; targetYear?:number; reference?:{storageKey:string;name:string;size:number}; table?:TableDefinition; sharedFields?:SharedFieldDefinition[]; sharedFieldStates?:SharedFieldState[]; createdAt:string; recipients:Recipient[] };
+export type Collection = { id:string; type?:CollectionType; mode?:CollectionMode; title:string; description:string; deadline:string; shareTokenHash:string; manageTokenHash:string; templateStorageKey:string; templateName:string; templateSize:number; targetYear?:number; reference?:{storageKey:string;name:string;size:number}; table?:TableDefinition; sharedFields?:SharedFieldDefinition[]; sharedFieldStates?:SharedFieldState[]; archived?:boolean; createdAt:string; recipients:Recipient[] };
 export type AppState = { collections:Collection[] };
 export function collectionType(collection:Pick<Collection,"type">):CollectionType{return collection.type??"document"}
 export function collectionMode(collection:Pick<Collection,"mode">):CollectionMode{return collection.mode??"individual"}

@@ -28,5 +28,6 @@ export function ManageCollectionRow({id,title,type,deadline,recipientCount,submi
     <td>{recipientCount}명</td>
     <td>{submittedCount}/{recipientCount}</td>
     <td><span className="badge badge-open">진행 중</span></td>
+    <td><span className="btn btn-secondary btn-small" aria-hidden>관리 열기</span></td>
   </tr>;
 }

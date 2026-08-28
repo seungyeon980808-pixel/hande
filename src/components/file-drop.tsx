@@ -6,9 +6,11 @@ import { useEffect,useId,useRef,useState } from "react";
  * 눈에 띄는 파일 선택 영역. 클릭과 드래그앤드롭을 모두 받는다.
  * form 안에서 쓰려면 name 을 넘겨 실제 <input type="file"> 값으로 제출한다.
  */
-export function FileDrop({accept,name,required=false,hint,file,onPick,initial,badge}:{
+export function FileDrop({accept,name,required=false,hint,file,onPick,initial,badge,inputRef}:{
   accept:string;name?:string;required?:boolean;hint?:string;
   file?:File|null;onPick?:(file:File|null)=>void;initial?:File;
+  /** 바깥 코드가 변환한 파일을 직접 넣어야 할 때 실제 input 에 접근하는 통로 */
+  inputRef?:React.MutableRefObject<HTMLInputElement|null>;
   /** 파일이 이미 채워진 이유를 알려 준다 (예: 앞 화면에서 넘어옴) */
   badge?:string;
 }){
@@ -59,7 +61,7 @@ export function FileDrop({accept,name,required=false,hint,file,onPick,initial,ba
       onDragOver={event=>{event.preventDefault();setOver(true)}}
       onDragLeave={()=>setOver(false)}
       onDrop={onDrop}>
-      <input ref={input} id={id} type="file" accept={accept} name={name} required={required&&!picked}
+      <input ref={element=>{input.current=element;if(inputRef)inputRef.current=element}} id={id} type="file" accept={accept} name={name} required={required&&!picked}
         onChange={event=>choose(event.target.files?.[0]??null)}/>
       <span className="file-drop-icon" aria-hidden>{picked?"✓":"＋"}</span>
       {picked

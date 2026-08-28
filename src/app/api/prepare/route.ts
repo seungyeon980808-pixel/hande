@@ -43,10 +43,15 @@ export async function POST(request:Request){
     try{result=applySuggestions(bytes,accepted)}
     catch{return Response.json({error:"양식을 만들지 못했습니다. 손상된 파일일 수 있습니다."},{status:400})}
 
-    // 파일 이름의 연도도 함께 바꾼다. 비우는 항목은 이름에 적용하지 않는다.
+    // 파일 이름의 연도도 올해로 바꾼다.
+    // "B_2025_졸업고사일정" 처럼 숫자만 있는 연도는 본문 치환 목록에 없으므로
+    // 문서에서 찾아낸 작년 연도를 직접 바꾸고, 그래도 안 바뀌면 뒤에 덧붙인다.
     const renames=accepted.filter(pair=>pair.to);
-    const base=renameBySuggestions(path.basename(file.name,path.extname(file.name)),renames);
-    const name=safeFileName(`${base}_${targetYear}양식.hwpx`);
+    const original=path.basename(file.name,path.extname(file.name));
+    let base=renameBySuggestions(original,renames);
+    const sourceYear=detectPrepItems(extractText(bytes),targetYear).sourceYear;
+    if(sourceYear!==targetYear)base=base.replaceAll(String(sourceYear),String(targetYear));
+    const name=safeFileName(base.includes(String(targetYear))?`${base}.hwpx`:`${base}_${targetYear}학년도.hwpx`);
     return new Response(new Uint8Array(result),{headers:{
       "Content-Type":"application/vnd.hancom.hwpx",
       "Content-Disposition":`attachment; filename*=UTF-8''${encodeURIComponent(name)}`,

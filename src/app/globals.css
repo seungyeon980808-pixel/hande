@@ -125,9 +125,16 @@ button,input,textarea,select { font:inherit; } button,a { -webkit-tap-highlight-
 @media (max-width:800px) { .topbar{padding:0 16px;height:58px}.brand small{display:none}.layout{display:block;min-height:calc(100vh - 58px)}.sidebar{position:fixed;z-index:10;left:0;right:0;bottom:0;display:flex;gap:3px;padding:6px;overflow-x:auto;border-top:1px solid var(--line);border-right:0}.nav-label{display:none}.nav-item{flex:1 0 auto;min-width:88px;margin:0;padding:9px 8px;text-align:center;font-size:12px}.content{padding:18px 14px 88px;overflow-x:hidden}.page-head{align-items:stretch;flex-direction:column}.page-actions{justify-content:stretch}.page-actions .btn{flex:1}.stats{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:minmax(0,1fr);width:100%}.field.full{grid-column:auto}.teacher-grid{grid-template-columns:1fr 1fr}.editor-box{min-height:520px}.editor-actions{align-items:stretch;flex-direction:column}.action-buttons{display:grid;grid-template-columns:1fr 1fr;width:100%}.manual-item summary{padding:16px}.manual-search-panel{padding:16px}.type-tabs{grid-template-columns:1fr}.selected-person{align-items:stretch;flex-direction:column}.selected-person .btn{align-self:flex-end}.grid-editor input,.grid-editor select{width:150px;min-height:44px}.schema-columns{margin-right:-2px}.xlsx-step{grid-template-columns:32px minmax(0,1fr)}.xlsx-step .action-buttons{grid-template-columns:1fr}.xlsx-step .btn{width:100%}.toolbox-toolbar{align-items:stretch;flex-direction:column}.tool-search{width:100%}.tool-categories{flex-wrap:nowrap;overflow-x:auto}.tool-grid{grid-template-columns:1fr}.tool-add-card{flex-direction:column;min-height:125px}.tool-form-row,.tool-image-options{grid-template-columns:1fr}.tool-image-options>span{text-align:center}.tool-modal-layer{padding:8px}.tool-modal form,.tool-modal-head{padding-left:18px;padding-right:18px}.timetable-controls{align-items:stretch;flex-direction:column}.timetable-date-nav{display:grid;grid-template-columns:42px minmax(0,1fr) 42px auto}.timetable-date-nav label{min-width:0}.timetable-date-nav input{width:100%}.timetable-class-select{display:grid;grid-template-columns:1fr 1fr}.timetable-class-select .btn{grid-column:1/-1}.timetable-summary{align-items:flex-start;flex-direction:column}.timetable-sync{text-align:left}.timetable-list{padding-left:16px;padding-right:16px} }
 
 /* 작년 자료와 올해 문서를 좌우로 나란히 보는 영역 */
+/* 좌우로 나란히 볼 때 두 칸의 높이를 맞춘다.
+   편집기 툴바 높이가 좌우로 달라 아래쪽이 어긋나므로 칸 높이를 정해 둔다. */
 .side-by-side{display:grid;gap:12px}
-.side-by-side[data-open="true"]{grid-template-columns:1fr 1fr}
-@media (max-width:1100px){.side-by-side[data-open="true"]{grid-template-columns:1fr}}
+.side-by-side[data-open="true"]{grid-template-columns:1fr 1fr;align-items:stretch;height:calc(100vh - 210px);min-height:520px}
+.side-by-side[data-open="true"] .side-pane{min-height:0}
+.side-by-side[data-open="true"] .side-pane>div:not([class]){display:flex;flex-direction:column;min-height:0;flex:1}
+.side-by-side[data-open="true"] .editor-box{flex:1;min-height:0}
+.side-by-side[data-open="true"] .editor-box>iframe{height:100%!important;width:100%!important;display:block}
+@media (max-width:1100px){.side-by-side[data-open="true"]{grid-template-columns:1fr;height:auto;min-height:0}
+  .side-by-side[data-open="true"] .editor-box{min-height:520px}}
 .side-pane{min-width:0;display:flex;flex-direction:column}
 .side-pane-head{font-size:13px;font-weight:700;color:var(--navy,#1b3a6b);padding:6px 2px;display:flex;gap:8px;align-items:baseline;min-height:28px;flex:0 0 auto;overflow:hidden;white-space:nowrap}
 .side-pane-head .help{overflow:hidden;text-overflow:ellipsis}

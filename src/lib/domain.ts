@@ -7,7 +7,7 @@ export type TableDefinition = { columns:TableColumn[]; initialRows:TableRow[] };
 export type SubmissionVersion = { id:string; version:number; kind?:"file"|"table"; storageKey:string; displayName:string; size:number; createdAt:string; rows?:TableRow[] };
 export type Draft = { id:string; deviceKeyHash:string; kind?:"file"|"table"; storageKey:string; displayName:string; size:number; updatedAt:string; rows?:TableRow[] };
 export type Recipient = Teacher & { versions:SubmissionVersion[]; drafts:Draft[] };
-export type Collection = { id:string; type?:CollectionType; title:string; description:string; deadline:string; shareTokenHash:string; manageTokenHash:string; templateStorageKey:string; templateName:string; templateSize:number; table?:TableDefinition; createdAt:string; recipients:Recipient[] };
+export type Collection = { id:string; type?:CollectionType; title:string; description:string; deadline:string; shareTokenHash:string; manageTokenHash:string; templateStorageKey:string; templateName:string; templateSize:number; targetYear?:number; reference?:{storageKey:string;name:string;size:number}; table?:TableDefinition; createdAt:string; recipients:Recipient[] };
 export type AppState = { collections:Collection[] };
 export function collectionType(collection:Pick<Collection,"type">):CollectionType{return collection.type??"document"}
 export function collectionClosed(collection:Pick<Collection,"deadline">,now=Date.now()){return new Date(collection.deadline).getTime()<=now}

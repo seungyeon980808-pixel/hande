@@ -2,7 +2,10 @@ import type { CursorRect } from '@/core/types';
 import { VirtualScroll } from '@/view/virtual-scroll';
 
 /** 한 필드가 차지하는 화면 영역. 시작·끝 캐럿 사각형에서 계산한다. */
-export type FieldHighlightRect = { startRect: CursorRect; endRect: CursorRect };
+export type FieldHighlightRect =
+  | { kind: 'caret'; startRect: CursorRect; endRect: CursorRect }
+  /** 표 안 누름틀은 칸 전체를 칠한다. 좌표는 페이지 기준이다. */
+  | { kind: 'cell'; pageIndex: number; x: number; y: number; w: number; h: number };
 
 /**
  * 양식 모드에서 내가 작성해야 할 누름틀에 음영을 깔아 준다.
@@ -64,6 +67,25 @@ export class FieldHighlightRenderer {
 
     this.rects.forEach((rect, index) => {
       const box = this.boxes[index];
+      const style = 'position:absolute;pointer-events:none;'
+        + 'background:rgba(250,204,21,0.28);'
+        + 'border:1px dashed rgba(202,138,4,0.85);'
+        + 'border-radius:2px;box-sizing:border-box;';
+
+      if (rect.kind === 'cell') {
+        // 칸 전체를 칠한다. 빈 누름틀은 폭이 0 이라 글자 기준으로 잡으면
+        // 좁은 띠가 되어, 그 자리를 정확히 눌러야만 쓸 수 있는 것처럼 보인다.
+        const pageOffset = this.virtualScroll.getPageOffset(rect.pageIndex);
+        const pageLeft = this.calcPageLeft(rect.pageIndex);
+        box.style.cssText = style;
+        box.style.left = `${pageLeft + rect.x * zoom}px`;
+        box.style.top = `${pageOffset + rect.y * zoom}px`;
+        box.style.width = `${rect.w * zoom}px`;
+        box.style.height = `${rect.h * zoom}px`;
+        box.style.display = 'block';
+        return;
+      }
+
       const { startRect, endRect } = rect;
       // 시작과 끝이 다른 줄/페이지로 갈라지면 시작 줄만 칠한다.
       // 줄바꿈된 누름틀까지 정확히 덮으려면 줄 단위 사각형이 필요한데,
@@ -77,10 +99,7 @@ export class FieldHighlightRenderer {
         ? Math.max((endRect.x - startRect.x) * zoom, 6 * zoom)
         : 24 * zoom;
 
-      box.style.cssText = 'position:absolute;pointer-events:none;'
-        + 'background:rgba(250,204,21,0.28);'
-        + 'border:1px dashed rgba(202,138,4,0.85);'
-        + 'border-radius:2px;box-sizing:border-box;';
+      box.style.cssText = style;
       box.style.left = `${left}px`;
       box.style.top = `${pageOffset + startRect.y * zoom}px`;
       box.style.width = `${width}px`;

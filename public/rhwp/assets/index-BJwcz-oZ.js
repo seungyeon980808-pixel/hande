@@ -23725,12 +23725,24 @@ var FieldHighlightRenderer = class {
 		for (let i = this.rects.length; i < this.boxes.length; i += 1) this.boxes[i].style.display = "none";
 		this.rects.forEach((rect, index) => {
 			const box = this.boxes[index];
+			const style = "position:absolute;pointer-events:none;background:rgba(250,204,21,0.28);border:1px dashed rgba(202,138,4,0.85);border-radius:2px;box-sizing:border-box;";
+			if (rect.kind === "cell") {
+				const pageOffset = this.virtualScroll.getPageOffset(rect.pageIndex);
+				const pageLeft = this.calcPageLeft(rect.pageIndex);
+				box.style.cssText = style;
+				box.style.left = `${pageLeft + rect.x * zoom}px`;
+				box.style.top = `${pageOffset + rect.y * zoom}px`;
+				box.style.width = `${rect.w * zoom}px`;
+				box.style.height = `${rect.h * zoom}px`;
+				box.style.display = "block";
+				return;
+			}
 			const { startRect, endRect } = rect;
 			const sameLine = startRect.pageIndex === endRect.pageIndex && Math.abs(startRect.y - endRect.y) < 1;
 			const pageOffset = this.virtualScroll.getPageOffset(startRect.pageIndex);
 			const left = this.calcPageLeft(startRect.pageIndex) + startRect.x * zoom;
 			const width = sameLine ? Math.max((endRect.x - startRect.x) * zoom, 6 * zoom) : 24 * zoom;
-			box.style.cssText = "position:absolute;pointer-events:none;background:rgba(250,204,21,0.28);border:1px dashed rgba(202,138,4,0.85);border-radius:2px;box-sizing:border-box;";
+			box.style.cssText = style;
 			box.style.left = `${left}px`;
 			box.style.top = `${pageOffset + startRect.y * zoom}px`;
 			box.style.width = `${width}px`;
@@ -34279,15 +34291,44 @@ var InputHandler = class {
 				if (typeof field.startCharIdx !== "number" || typeof field.endCharIdx !== "number") continue;
 				const pos = this.formFieldPosition(field);
 				if (!pos) continue;
+				const cellRect = this.editableCellRect(field, pos);
+				if (cellRect) {
+					rects.push(cellRect);
+					continue;
+				}
 				const guideLen = Array.from(field.guide ?? "").length;
 				const end = field.endCharIdx > field.startCharIdx ? field.endCharIdx : field.startCharIdx + Math.max(guideLen, 1);
 				const rect = this.getClickHereBoundaryRects(pos, field.startCharIdx, end);
-				if (rect) rects.push(rect);
+				if (rect) rects.push({
+					kind: "caret",
+					...rect
+				});
 			}
 		} catch (err) {
 			console.warn("[fieldHighlight] 담당 필드 음영 계산 실패:", err);
 		}
 		return rects;
+	}
+	/** 필드가 표의 칸 안에 있으면 그 칸의 화면 사각형을 돌려준다. */
+	editableCellRect(field, pos) {
+		const path = field.location?.path;
+		if (!Array.isArray(path) || path.length === 0) return null;
+		if (path.some((entry) => entry?.type === "textbox")) return null;
+		if (pos.parentParaIndex === void 0 || pos.cellIndex === void 0) return null;
+		try {
+			const target = (path.length > 1 ? this.wasm.getTableCellBboxesByPath(pos.sectionIndex, pos.parentParaIndex, JSON.stringify(pos.cellPath ?? [])) : this.wasm.getTableCellBboxes(pos.sectionIndex, pos.parentParaIndex, path[0].controlIndex)).find((box) => box.cellIdx === pos.cellIndex);
+			if (!target) return null;
+			return {
+				kind: "cell",
+				pageIndex: target.pageIndex,
+				x: target.x,
+				y: target.y,
+				w: target.w,
+				h: target.h
+			};
+		} catch {
+			return null;
+		}
 	}
 	/**
 	* 첫 담당 칸이 화면에 들어오도록 스크롤한다.
@@ -34299,7 +34340,7 @@ var InputHandler = class {
 		const rects = this.collectEditableFieldRects();
 		if (rects.length === 0) return;
 		const zoom = this.viewportManager.getZoom();
-		const top = Math.min(...rects.map(({ startRect }) => this.virtualScroll.getPageOffset(startRect.pageIndex) + startRect.y * zoom));
+		const top = Math.min(...rects.map((rect) => rect.kind === "cell" ? this.virtualScroll.getPageOffset(rect.pageIndex) + rect.y * zoom : this.virtualScroll.getPageOffset(rect.startRect.pageIndex) + rect.startRect.y * zoom));
 		const viewHeight = this.container.clientHeight;
 		const margin = Math.max(80, viewHeight * .25);
 		const target = Math.max(0, top - margin);
@@ -65865,7 +65906,7 @@ async function initialize() {
 		rendererSession = new RendererSession(renderBackendRequest, canvaskitModeRequest, canvaskitSurfaceRequest, renderProfile, async (mode, surface) => {
 			msg.textContent = "CanvasKit 로딩 중...";
 			const { CanvasKitLayerRenderer } = await __vitePreload(async () => {
-				const { CanvasKitLayerRenderer } = await import("./canvaskit-renderer-DqtEORCR.js");
+				const { CanvasKitLayerRenderer } = await import("./canvaskit-renderer-B9S27ipe.js");
 				return { CanvasKitLayerRenderer };
 			}, []);
 			return CanvasKitLayerRenderer.create(mode, surface, { requirePreparedFontFamilies: renderBackendRequest.backend === "auto" });

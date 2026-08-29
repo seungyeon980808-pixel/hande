@@ -3776,18 +3776,46 @@ export class InputHandler {
         if (typeof field.startCharIdx !== 'number' || typeof field.endCharIdx !== 'number') continue;
         const pos = this.formFieldPosition(field);
         if (!pos) continue;
-        // 빈 누름틀은 안내문 길이만큼 폭을 잡아야 눈에 띈다.
+
+        // 표 안 누름틀은 칸 전체를 칠한다. 빈 누름틀은 시작=끝이라 글자 기준으로
+        // 잡으면 좁은 띠가 되고, 그 자리를 정확히 눌러야만 쓸 수 있는 것처럼 보인다.
+        const cellRect = this.editableCellRect(field, pos);
+        if (cellRect) { rects.push(cellRect); continue; }
+
+        // 본문에 놓인 누름틀은 안내문 길이만큼 폭을 잡아야 눈에 띈다.
         const guideLen = Array.from(field.guide ?? '').length;
         const end = field.endCharIdx > field.startCharIdx
           ? field.endCharIdx
           : field.startCharIdx + Math.max(guideLen, 1);
         const rect = this.getClickHereBoundaryRects(pos, field.startCharIdx, end);
-        if (rect) rects.push(rect);
+        if (rect) rects.push({ kind: 'caret', ...rect });
       }
     } catch (err) {
       console.warn('[fieldHighlight] 담당 필드 음영 계산 실패:', err);
     }
     return rects;
+  }
+
+  /** 필드가 표의 칸 안에 있으면 그 칸의 화면 사각형을 돌려준다. */
+  private editableCellRect(
+    field: { location?: { path?: Array<any> } },
+    pos: DocumentPosition,
+  ): FieldHighlightRect | null {
+    const path = field.location?.path;
+    if (!Array.isArray(path) || path.length === 0) return null;
+    // 글상자 안은 칸이 아니다.
+    if (path.some((entry) => entry?.type === 'textbox')) return null;
+    if (pos.parentParaIndex === undefined || pos.cellIndex === undefined) return null;
+    try {
+      const boxes = path.length > 1
+        ? this.wasm.getTableCellBboxesByPath(pos.sectionIndex, pos.parentParaIndex, JSON.stringify(pos.cellPath ?? []))
+        : this.wasm.getTableCellBboxes(pos.sectionIndex, pos.parentParaIndex, path[0].controlIndex);
+      const target = boxes.find((box) => box.cellIdx === pos.cellIndex);
+      if (!target) return null;
+      return { kind: 'cell', pageIndex: target.pageIndex, x: target.x, y: target.y, w: target.w, h: target.h };
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -3801,8 +3829,9 @@ export class InputHandler {
     if (rects.length === 0) return;
     const zoom = this.viewportManager.getZoom();
     // 문서 순서가 아니라 화면에서 가장 위에 있는 칸을 기준으로 삼는다.
-    const top = Math.min(...rects.map(({ startRect }) =>
-      this.virtualScroll.getPageOffset(startRect.pageIndex) + startRect.y * zoom));
+    const top = Math.min(...rects.map((rect) => rect.kind === 'cell'
+      ? this.virtualScroll.getPageOffset(rect.pageIndex) + rect.y * zoom
+      : this.virtualScroll.getPageOffset(rect.startRect.pageIndex) + rect.startRect.y * zoom));
     const viewHeight = this.container.clientHeight;
     const margin = Math.max(80, viewHeight * 0.25);
     const target = Math.max(0, top - margin);

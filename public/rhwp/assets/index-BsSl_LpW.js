@@ -12130,8 +12130,8 @@ function persistDownloadWithContentLoss(report, download, notify) {
 }
 //#endregion
 //#region src/core/font-loader.ts
-var CDN_HAMCHOB_R = "/rhwp/fonts/HANBatang.woff";
-var CDN_HAMCHOD_R = "/rhwp/fonts/HCRDotum.woff";
+var CDN_HAMCHOB_R = "https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2104@1.0/HANBatang.woff";
+var CDN_HAMCHOD_R = "https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_four@1.0/HCRDotum.woff";
 var FONT_LIST = [
 	{
 		name: "함초롬돋움",
@@ -23672,6 +23672,90 @@ var FieldMarkerRenderer = class {
 	}
 };
 //#endregion
+//#region src/engine/field-highlight-renderer.ts
+/**
+* 양식 모드에서 내가 작성해야 할 누름틀에 음영을 깔아 준다.
+*
+* 낫표 마커(FieldMarkerRenderer)는 커서가 들어간 필드 하나만 표시하므로,
+* 문서를 처음 연 사람은 어디를 써야 하는지 알 수 없다. 이 렌더러는
+* 담당 필드 전부를 상시 표시해 "내가 쓸 곳은 여기 세 군데"가 한눈에
+* 보이게 한다. 엑셀에서 잠긴 시트의 입력 가능 셀만 도드라지는 것과 같다.
+*
+* 캔버스를 건드리지 않고 절대 위치 DIV 를 겹쳐 그린다.
+*/
+var FieldHighlightRenderer = class {
+	container;
+	virtualScroll;
+	layer;
+	boxes = [];
+	rects = [];
+	enabled = false;
+	constructor(container, virtualScroll) {
+		this.container = container;
+		this.virtualScroll = virtualScroll;
+		this.layer = document.createElement("div");
+		this.layer.className = "field-highlight-layer";
+		this.layer.style.cssText = "position:absolute;inset:0;pointer-events:none;z-index:8;display:none;";
+		this.attach();
+	}
+	attach() {
+		if (this.layer.isConnected) return;
+		(this.container.querySelector("#scroll-content") ?? this.container).appendChild(this.layer);
+	}
+	/** 표시할 필드 영역을 갈아 끼운다. 빈 배열이면 음영이 사라진다. */
+	setRects(rects, zoom) {
+		this.rects = rects;
+		this.enabled = rects.length > 0;
+		this.render(zoom);
+	}
+	/** 스크롤·확대축소 후 위치를 다시 잡는다. */
+	render(zoom) {
+		if (!this.enabled) {
+			this.layer.style.display = "none";
+			return;
+		}
+		this.attach();
+		this.layer.style.display = "block";
+		while (this.boxes.length < this.rects.length) {
+			const box = document.createElement("div");
+			box.className = "field-highlight-box";
+			this.layer.appendChild(box);
+			this.boxes.push(box);
+		}
+		for (let i = this.rects.length; i < this.boxes.length; i += 1) this.boxes[i].style.display = "none";
+		this.rects.forEach((rect, index) => {
+			const box = this.boxes[index];
+			const { startRect, endRect } = rect;
+			const sameLine = startRect.pageIndex === endRect.pageIndex && Math.abs(startRect.y - endRect.y) < 1;
+			const pageOffset = this.virtualScroll.getPageOffset(startRect.pageIndex);
+			const left = this.calcPageLeft(startRect.pageIndex) + startRect.x * zoom;
+			const width = sameLine ? Math.max((endRect.x - startRect.x) * zoom, 6 * zoom) : 24 * zoom;
+			box.style.cssText = "position:absolute;pointer-events:none;background:rgba(250,204,21,0.28);border:1px dashed rgba(202,138,4,0.85);border-radius:2px;box-sizing:border-box;";
+			box.style.left = `${left}px`;
+			box.style.top = `${pageOffset + startRect.y * zoom}px`;
+			box.style.width = `${width}px`;
+			box.style.height = `${startRect.height * zoom}px`;
+			box.style.display = "block";
+		});
+	}
+	/** 페이지의 화면 X 좌표. 낫표 마커와 같은 규칙을 쓴다. */
+	calcPageLeft(pageIndex) {
+		const gridLeft = this.virtualScroll.getPageLeft(pageIndex);
+		if (gridLeft >= 0) return gridLeft;
+		return ((this.container.querySelector("#scroll-content")?.clientWidth ?? 0) - this.virtualScroll.getPageWidth(pageIndex)) / 2;
+	}
+	hide() {
+		this.enabled = false;
+		this.rects = [];
+		this.layer.style.display = "none";
+	}
+	dispose() {
+		this.layer.remove();
+		this.boxes = [];
+		this.rects = [];
+	}
+};
+//#endregion
 //#region src/engine/selection-renderer.ts
 /** 선택 영역을 파란색 반투명 사각형으로 렌더링한다 */
 var SelectionRenderer = class {
@@ -31455,6 +31539,7 @@ var InputHandler = class {
 	cursor;
 	caret;
 	fieldMarker;
+	fieldHighlight;
 	selectionRenderer;
 	history;
 	textarea;
@@ -31571,6 +31656,7 @@ var InputHandler = class {
 		this.cursor = new CursorState(wasm);
 		this.caret = new CaretRenderer(container, virtualScroll);
 		this.fieldMarker = new FieldMarkerRenderer(container, virtualScroll);
+		this.fieldHighlight = new FieldHighlightRenderer(container, virtualScroll);
 		this.selectionRenderer = new SelectionRenderer(container, virtualScroll);
 		this.history = new CommandHistory();
 		this.deferredPaginationRunner = new DeferredPaginationRunner(wasm, (result) => this.completeResumablePagination(result.pageCount), () => this.fallbackFromResumablePagination());
@@ -31647,6 +31733,7 @@ var InputHandler = class {
 				if (this.cursor.getRect()) this.caret.updatePosition(this.viewportManager.getZoom());
 				if (this.fieldMarker.isVisible) this.updateFieldMarkers();
 			}
+			if (this.editableFormFieldSourceNames.size > 0) this.refreshEditableFieldHighlights();
 			if (this.cursor.hasSelection()) this.updateSelection();
 			if (this.cursor.isInCellSelectionMode()) this.updateCellSelection();
 			if (this.cursor.isInPictureObjectSelection()) this.renderPictureObjectSelection();
@@ -31667,6 +31754,7 @@ var InputHandler = class {
 			requestAnimationFrame(() => {
 				if (this.cursor.isInPictureObjectSelection()) this.renderPictureObjectSelection();
 				if (this.cursor.isInTableObjectSelection()) this.renderTableObjectSelection();
+				if (this.editableFormFieldSourceNames.size > 0) this.refreshEditableFieldHighlights();
 			});
 		});
 		eventBus.on("create-new-document", () => {
@@ -34120,6 +34208,7 @@ var InputHandler = class {
 		this.textarea.remove();
 		this.caret.dispose();
 		this.fieldMarker.dispose();
+		this.fieldHighlight.dispose();
 		this.selectionRenderer.dispose();
 		this.cellSelectionRenderer?.dispose();
 		this.tableObjectRenderer?.dispose();
@@ -34134,6 +34223,8 @@ var InputHandler = class {
 	/** 현재 편집 모드를 설정한다 */
 	setEditMode(mode) {
 		this.editMode = mode;
+		if (mode === "form") this.syncEditableFormFieldIds();
+		else this.fieldHighlight.hide();
 		if (mode === "form") {
 			if (this.cursor.isInPictureObjectSelection()) {
 				this.cursor.moveOutOfSelectedPicture();
@@ -34155,8 +34246,64 @@ var InputHandler = class {
 	/** 참여자 양식 모드에서 편집할 ClickHere 필드 원본 이름을 교체한다. */
 	setEditableFormFieldSourceNames(sourceNames) {
 		this.editableFormFieldSourceNames = new Set(sourceNames);
-		this.editableFormFieldIds = new Set(this.wasm.getFieldList().filter((field) => field.fieldType === "clickhere" && this.editableFormFieldSourceNames.has(field.name)).map((field) => field.fieldId));
+		this.syncEditableFormFieldIds();
 		this.eventBus.emit("command-state-changed");
+	}
+	/** 이름 목록을 기준으로 잠금 판정용 fieldId 집합과 음영을 현재 문서에 다시 맞춘다. */
+	syncEditableFormFieldIds() {
+		this.editableFormFieldIds = new Set(this.wasm.getFieldList().filter((field) => field.fieldType === "clickhere" && this.editableFormFieldSourceNames.has(field.name)).map((field) => field.fieldId));
+		this.refreshEditableFieldHighlights();
+	}
+	/**
+	* 담당 누름틀 전부에 음영을 다시 깐다.
+	*
+	* 낫표 마커와 달리 커서 위치와 무관하게, 편집이 허용된 필드를 모두 칠한다.
+	* 문서를 열자마자 "내가 쓸 곳이 몇 군데인지" 보이게 하는 것이 목적이다.
+	*/
+	refreshEditableFieldHighlights() {
+		if (this.editableFormFieldSourceNames.size === 0) {
+			this.fieldHighlight.hide();
+			return;
+		}
+		const rects = this.collectEditableFieldRects();
+		if (window.__rhwpFieldHighlightDebug) console.info("[fieldHighlight] 담당 %d개 중 %d개 좌표 확보", this.editableFormFieldSourceNames.size, rects.length);
+		this.fieldHighlight.setRects(rects, this.viewportManager.getZoom());
+	}
+	/** 담당 누름틀들의 화면 사각형을 모은다. 음영과 스크롤이 같은 값을 쓴다. */
+	collectEditableFieldRects() {
+		const rects = [];
+		try {
+			for (const field of this.wasm.getFieldList()) {
+				if (field.fieldType !== "clickhere") continue;
+				if (!this.editableFormFieldSourceNames.has(field.name)) continue;
+				if (typeof field.startCharIdx !== "number" || typeof field.endCharIdx !== "number") continue;
+				const pos = this.formFieldPosition(field);
+				if (!pos) continue;
+				const guideLen = Array.from(field.guide ?? "").length;
+				const end = field.endCharIdx > field.startCharIdx ? field.endCharIdx : field.startCharIdx + Math.max(guideLen, 1);
+				const rect = this.getClickHereBoundaryRects(pos, field.startCharIdx, end);
+				if (rect) rects.push(rect);
+			}
+		} catch (err) {
+			console.warn("[fieldHighlight] 담당 필드 음영 계산 실패:", err);
+		}
+		return rects;
+	}
+	/**
+	* 첫 담당 칸이 화면에 들어오도록 스크롤한다.
+	*
+	* 음영을 칠해 두어도 그 칸이 문서 아래쪽이면 열자마자는 보이지 않는다.
+	* 담당자가 "내가 쓸 곳"을 찾아 헤매지 않도록 첫 칸까지 데려다 준다.
+	*/
+	scrollToFirstEditableField() {
+		const rects = this.collectEditableFieldRects();
+		if (rects.length === 0) return;
+		const zoom = this.viewportManager.getZoom();
+		const top = Math.min(...rects.map(({ startRect }) => this.virtualScroll.getPageOffset(startRect.pageIndex) + startRect.y * zoom));
+		const viewHeight = this.container.clientHeight;
+		const margin = Math.max(80, viewHeight * .25);
+		const target = Math.max(0, top - margin);
+		if (target > this.container.scrollTop) this.container.scrollTop = target;
 	}
 	/** 현재 허용된 참여자용 ClickHere 필드 목록을 반환한다. */
 	getEditableFormFieldSourceNames() {
@@ -34183,6 +34330,7 @@ var InputHandler = class {
 		const result = this.wasm.setFieldValue(field.fieldId, value);
 		if (!result.ok) throw new Error("필드 값을 변경하지 못했습니다.");
 		this.afterEdit();
+		this.syncEditableFormFieldIds();
 		return {
 			sourceName,
 			fieldId: field.fieldId,
@@ -65277,6 +65425,7 @@ async function routeEmbedRequest(method, rawParams, handlers, allowLegacyArray =
 		case "setEditMode":
 			if (params.mode !== "normal" && params.mode !== "form") throw new Error("mode must be normal or form");
 			return handlers.setEditMode(params.mode);
+		case "scrollToFirstEditableField": return handlers.scrollToFirstEditableField();
 		case "setEditableFieldSourceNames":
 			if (!Array.isArray(params.sourceNames) || !params.sourceNames.every((name) => typeof name === "string")) throw new Error("sourceNames must be an array of strings");
 			return handlers.setEditableFieldSourceNames(params.sourceNames);
@@ -65716,7 +65865,7 @@ async function initialize() {
 		rendererSession = new RendererSession(renderBackendRequest, canvaskitModeRequest, canvaskitSurfaceRequest, renderProfile, async (mode, surface) => {
 			msg.textContent = "CanvasKit 로딩 중...";
 			const { CanvasKitLayerRenderer } = await __vitePreload(async () => {
-				const { CanvasKitLayerRenderer } = await import("./canvaskit-renderer-o9CyL7lA.js");
+				const { CanvasKitLayerRenderer } = await import("./canvaskit-renderer-DqtEORCR.js");
 				return { CanvasKitLayerRenderer };
 			}, []);
 			return CanvasKitLayerRenderer.create(mode, surface, { requirePreparedFontFamilies: renderBackendRequest.backend === "auto" });
@@ -66584,6 +66733,11 @@ installEmbedRuntime({
 			await initPromise;
 			setEditMode(mode);
 			return { mode };
+		},
+		async scrollToFirstEditableField() {
+			await initPromise;
+			inputHandler?.scrollToFirstEditableField();
+			return { ok: true };
 		},
 		async setEditableFieldSourceNames(sourceNames) {
 			await initPromise;

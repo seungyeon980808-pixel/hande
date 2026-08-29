@@ -1,4 +1,4 @@
-import { a as localFontFaceKey, c as bytesToHex, i as loadLocalFontBytesFor, l as __commonJSMin, n as CANVASKIT_REPLAY_PLANES, o as resolveLocalFont, r as layerPaintOpReplayPlane, s as blake3, t as DEFAULT_CANVASKIT_SURFACE_REQUEST, u as __toESM } from "./index-BUkWz5UI.js";
+import { a as localFontFaceKey, c as bytesToHex, i as loadLocalFontBytesFor, l as __commonJSMin, n as CANVASKIT_REPLAY_PLANES, o as resolveLocalFont, r as layerPaintOpReplayPlane, s as blake3, t as DEFAULT_CANVASKIT_SURFACE_REQUEST, u as __toESM } from "./index-BsSl_LpW.js";
 //#region __vite-browser-external
 var require___vite_browser_external = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = {};

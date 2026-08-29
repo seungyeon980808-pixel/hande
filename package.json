@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "rhwp:build": "npm --prefix vendor/rhwp-studio exec -- vite build --base=/rhwp/",
+    "rhwp:deploy": "node scripts/deploy-rhwp.mjs"
   },
   "dependencies": {
     "@rhwp/core": "^0.8.4",

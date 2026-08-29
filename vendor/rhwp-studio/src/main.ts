@@ -1523,6 +1523,11 @@ installEmbedRuntime({
       setEditMode(mode);
       return { mode };
     },
+    async scrollToFirstEditableField() {
+      await initPromise;
+      inputHandler?.scrollToFirstEditableField();
+      return { ok: true as const };
+    },
     async setEditableFieldSourceNames(sourceNames) {
       await initPromise;
       if (!inputHandler) throw new Error('편집기가 준비되지 않았습니다.');

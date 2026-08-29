@@ -34,6 +34,7 @@ export interface EmbedRpcHandlers {
   cancelPendingAssignment(): Promise<{ ok: true }>;
   setEditMode(mode: 'normal' | 'form'): Promise<{ mode: 'normal' | 'form' }>;
   setEditableFieldSourceNames(sourceNames: string[]): Promise<{ sourceNames: string[] }>;
+  scrollToFirstEditableField(): Promise<{ ok: true }>;
   getFieldValueBySourceName(sourceName: string): Promise<{ sourceName: string; fieldId: number; value: string }>;
   setFieldValueBySourceName(sourceName: string, value: string): Promise<{ sourceName: string; fieldId: number; oldValue: string; newValue: string }>;
   listFields(): Promise<Array<{ sourceName: string; fieldId: number; value: string }>>;
@@ -117,6 +118,8 @@ export async function routeEmbedRequest(
       if (params.mode !== 'normal' && params.mode !== 'form') throw new Error('mode must be normal or form');
       return handlers.setEditMode(params.mode);
     }
+    case 'scrollToFirstEditableField':
+      return handlers.scrollToFirstEditableField();
     case 'setEditableFieldSourceNames': {
       if (!Array.isArray(params.sourceNames) || !params.sourceNames.every(name => typeof name === 'string')) {
         throw new Error('sourceNames must be an array of strings');

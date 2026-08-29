@@ -4,6 +4,7 @@ import { EventBus } from '@/core/event-bus';
 import { CursorState } from './cursor';
 import { CaretRenderer } from './caret-renderer';
 import { FieldMarkerRenderer } from './field-marker-renderer';
+import { FieldHighlightRenderer, type FieldHighlightRect } from './field-highlight-renderer';
 import { SelectionRenderer } from './selection-renderer';
 import { CommandHistory } from './history';
 import { DeleteSelectionCommand, ApplyCharFormatCommand, ApplyParaFormatCommand, SnapshotCommand, SubmodeSnapshotCommand, SetFormValueCommand, TextMutationEffectAccumulator, IMMEDIATE_TEXT_MUTATION_EFFECTS, applyCharShapeModsToRange, cellAxisPath, cellParaIndexOf } from './command';
@@ -296,6 +297,7 @@ export class InputHandler {
   private cursor: CursorState;
   private caret: CaretRenderer;
   private fieldMarker: FieldMarkerRenderer;
+  private fieldHighlight: FieldHighlightRenderer;
   private selectionRenderer: SelectionRenderer;
   private history: CommandHistory;
   private textarea: HTMLTextAreaElement;
@@ -541,6 +543,7 @@ export class InputHandler {
     this.cursor = new CursorState(wasm);
     this.caret = new CaretRenderer(container, virtualScroll);
     this.fieldMarker = new FieldMarkerRenderer(container, virtualScroll);
+    this.fieldHighlight = new FieldHighlightRenderer(container, virtualScroll);
     this.selectionRenderer = new SelectionRenderer(container, virtualScroll);
     this.history = new CommandHistory();
     this.deferredPaginationRunner = new DeferredPaginationRunner(
@@ -644,6 +647,10 @@ export class InputHandler {
           this.updateFieldMarkers();
         }
       }
+      // 담당 필드 음영은 커서와 무관하게 항상 줌을 따라간다.
+      if (this.editableFormFieldSourceNames.size > 0) {
+        this.refreshEditableFieldHighlights();
+      }
       // 텍스트 블럭 선택 줌 동기화
       if (this.cursor.hasSelection()) {
         this.updateSelection();
@@ -686,6 +693,10 @@ export class InputHandler {
         }
         if (this.cursor.isInTableObjectSelection()) {
           this.renderTableObjectSelection();
+        }
+        // 줄바꿈·페이지 재배치로 필드가 움직였을 수 있다.
+        if (this.editableFormFieldSourceNames.size > 0) {
+          this.refreshEditableFieldHighlights();
         }
       });
     });
@@ -3681,6 +3692,7 @@ export class InputHandler {
     this.textarea.remove();
     this.caret.dispose();
     this.fieldMarker.dispose();
+    this.fieldHighlight.dispose();
     this.selectionRenderer.dispose();
     this.cellSelectionRenderer?.dispose();
     this.tableObjectRenderer?.dispose();
@@ -3697,6 +3709,9 @@ export class InputHandler {
   /** 현재 편집 모드를 설정한다 */
   setEditMode(mode: EditorEditMode): void {
     this.editMode = mode;
+    // 양식 모드에 들어와야 담당 칸 음영이 의미를 가진다. 나가면 지운다.
+    if (mode === 'form') this.syncEditableFormFieldIds();
+    else this.fieldHighlight.hide();
     if (mode === 'form') {
       if (this.cursor.isInPictureObjectSelection()) {
         this.cursor.moveOutOfSelectedPicture();
@@ -3718,10 +3733,80 @@ export class InputHandler {
   /** 참여자 양식 모드에서 편집할 ClickHere 필드 원본 이름을 교체한다. */
   setEditableFormFieldSourceNames(sourceNames: readonly string[]): void {
     this.editableFormFieldSourceNames = new Set(sourceNames);
+    this.syncEditableFormFieldIds();
+    this.eventBus.emit('command-state-changed');
+  }
+
+  /** 이름 목록을 기준으로 잠금 판정용 fieldId 집합과 음영을 현재 문서에 다시 맞춘다. */
+  private syncEditableFormFieldIds(): void {
     this.editableFormFieldIds = new Set(this.wasm.getFieldList()
       .filter((field) => field.fieldType === 'clickhere' && this.editableFormFieldSourceNames.has(field.name))
       .map((field) => field.fieldId));
-    this.eventBus.emit('command-state-changed');
+    this.refreshEditableFieldHighlights();
+  }
+
+  /**
+   * 담당 누름틀 전부에 음영을 다시 깐다.
+   *
+   * 낫표 마커와 달리 커서 위치와 무관하게, 편집이 허용된 필드를 모두 칠한다.
+   * 문서를 열자마자 "내가 쓸 곳이 몇 군데인지" 보이게 하는 것이 목적이다.
+   */
+  refreshEditableFieldHighlights(): void {
+    if (this.editableFormFieldSourceNames.size === 0) {
+      this.fieldHighlight.hide();
+      return;
+    }
+    const rects = this.collectEditableFieldRects();
+    if ((window as any).__rhwpFieldHighlightDebug) {
+      console.info('[fieldHighlight] 담당 %d개 중 %d개 좌표 확보',
+        this.editableFormFieldSourceNames.size, rects.length);
+    }
+    this.fieldHighlight.setRects(rects, this.viewportManager.getZoom());
+  }
+
+  /** 담당 누름틀들의 화면 사각형을 모은다. 음영과 스크롤이 같은 값을 쓴다. */
+  private collectEditableFieldRects(): FieldHighlightRect[] {
+    const rects: FieldHighlightRect[] = [];
+    try {
+      for (const field of this.wasm.getFieldList()) {
+        if (field.fieldType !== 'clickhere') continue;
+        // 값이 채워지면 fieldId 가 재발번되므로 캐시해 둔 id 집합은 믿을 수 없다.
+        // 갱신 시점의 목록에서 이름으로 다시 찾아야 남의 칸에 음영이 번지지 않는다.
+        if (!this.editableFormFieldSourceNames.has(field.name)) continue;
+        if (typeof field.startCharIdx !== 'number' || typeof field.endCharIdx !== 'number') continue;
+        const pos = this.formFieldPosition(field);
+        if (!pos) continue;
+        // 빈 누름틀은 안내문 길이만큼 폭을 잡아야 눈에 띈다.
+        const guideLen = Array.from(field.guide ?? '').length;
+        const end = field.endCharIdx > field.startCharIdx
+          ? field.endCharIdx
+          : field.startCharIdx + Math.max(guideLen, 1);
+        const rect = this.getClickHereBoundaryRects(pos, field.startCharIdx, end);
+        if (rect) rects.push(rect);
+      }
+    } catch (err) {
+      console.warn('[fieldHighlight] 담당 필드 음영 계산 실패:', err);
+    }
+    return rects;
+  }
+
+  /**
+   * 첫 담당 칸이 화면에 들어오도록 스크롤한다.
+   *
+   * 음영을 칠해 두어도 그 칸이 문서 아래쪽이면 열자마자는 보이지 않는다.
+   * 담당자가 "내가 쓸 곳"을 찾아 헤매지 않도록 첫 칸까지 데려다 준다.
+   */
+  scrollToFirstEditableField(): void {
+    const rects = this.collectEditableFieldRects();
+    if (rects.length === 0) return;
+    const zoom = this.viewportManager.getZoom();
+    // 문서 순서가 아니라 화면에서 가장 위에 있는 칸을 기준으로 삼는다.
+    const top = Math.min(...rects.map(({ startRect }) =>
+      this.virtualScroll.getPageOffset(startRect.pageIndex) + startRect.y * zoom));
+    const viewHeight = this.container.clientHeight;
+    const margin = Math.max(80, viewHeight * 0.25);
+    const target = Math.max(0, top - margin);
+    if (target > this.container.scrollTop) this.container.scrollTop = target;
   }
 
   /** 현재 허용된 참여자용 ClickHere 필드 목록을 반환한다. */
@@ -3748,6 +3833,8 @@ export class InputHandler {
     const result = this.wasm.setFieldValue(field.fieldId, value);
     if (!result.ok) throw new Error('필드 값을 변경하지 못했습니다.');
     this.afterEdit();
+    // 값이 들어가면 fieldId 가 재발번될 수 있다. 잠금 판정용 집합과 음영을 다시 맞춘다.
+    this.syncEditableFormFieldIds();
     return { sourceName, fieldId: field.fieldId, oldValue: result.oldValue, newValue: result.newValue };
   }
 
